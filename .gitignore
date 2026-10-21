@@ -1,0 +1,39 @@
+# ============================================================
+# Fichiers que Git ne doit JAMAIS enregistrer ni envoyer
+# ============================================================
+
+# --- 1. Secrets : clés API, mots de passe ---
+# Le .env contient les vraies valeurs. Seul .env.example (sans secrets) est versionné.
+.env
+.env.*
+!.env.example
+
+# --- 2. Python (backend) ---
+# Environnement virtuel : chacun le recrée avec "pip install -r requirements.txt"
+.venv/
+venv/
+# Fichiers compilés et caches générés automatiquement par Python
+__pycache__/
+*.pyc
+.pytest_cache/
+# Fichiers statiques collectés et médias envoyés
+backend/staticfiles/
+backend/media/
+
+# --- 3. Angular (frontend) ---
+# Dépendances : chacun les réinstalle avec "npm install"
+node_modules/
+# Résultats de compilation et cache d'Angular
+frontend/dist/
+frontend/.angular/
+
+# --- 4. Modèles d'IA téléchargés ---
+# Le modèle d'embeddings se télécharge automatiquement au premier lancement
+models/
+.cache/
+
+# --- 5. Éditeurs et système ---
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store

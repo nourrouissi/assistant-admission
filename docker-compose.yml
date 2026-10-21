@@ -1,0 +1,36 @@
+# ============================================================
+# Services d'infrastructure du projet
+# Les valeurs ${...} sont lues dans le fichier .env
+# ============================================================
+
+services:
+  # Base de données PostgreSQL + extension pgvector (vecteurs du RAG)
+  db:
+    image: pgvector/pgvector:pg17          # image officielle : PostgreSQL 17 avec pgvector déjà installé
+    container_name: admission-db
+    restart: unless-stopped                # redémarre automatiquement, sauf si on l'arrête nous-mêmes
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"                        # port de la machine : port du conteneur
+    volumes:
+      - pgdata:/var/lib/postgresql/data    # les données survivent à l'arrêt du conteneur
+    healthcheck:                           # Docker vérifie régulièrement que la base répond
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Mailpit : faux serveur e-mail qui capture les messages (développement et tests)
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: admission-mailpit
+    restart: unless-stopped
+    ports:
+      - "1025:1025"                        # SMTP : Django envoie les e-mails ici
+      - "8025:8025"                        # interface web : http://localhost:8025
+
+volumes:
+  pgdata:                                  # volume nommé, géré par Docker
