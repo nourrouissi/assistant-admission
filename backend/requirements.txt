@@ -5,3 +5,5 @@ django-cors-headers>=4.9      # Autoriser le frontend Angular à appeler l'API
 python-dotenv>=1.2            # Lecture du fichier .env
 psycopg[binary]>=3.3          # Pilote PostgreSQL
 openpyxl>=3.1                 # Lecture du fichier Excel des formations
+pytest>=8.0                   # Tests automatisés
+pytest-django>=4.9            # Intégration de pytest avec Django (base de test temporaire)

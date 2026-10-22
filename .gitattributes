@@ -1,0 +1,9 @@
+# Fins de ligne : LF partout (format Linux), quel que soit le poste.
+# Évite les caractères invisibles dans les fichiers lus par Docker (.env, docker-compose.yml).
+* text=auto eol=lf
+
+# Fichiers binaires : jamais modifiés par Git
+*.xlsx binary
+*.png binary
+*.jpg binary
+*.pdf binary

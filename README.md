@@ -66,6 +66,7 @@ Ouvrir `.env` et renseigner au minimum :
 
 | Variable | Valeur |
 |---|---|
+| `DJANGO_SECRET_KEY` | Clé secrète Django (générée à l'étape 3 du backend) |
 | `POSTGRES_PASSWORD` | Un mot de passe de votre choix (lettres et chiffres) |
 | `GEMINI_API_KEY` | Votre clé Google Gemini |
 | `GROQ_API_KEY` | Votre clé Groq |
@@ -135,6 +136,7 @@ Copier la valeur affichée dans `DJANGO_SECRET_KEY` du fichier `.env`.
 ```bash
 python manage.py migrate
 ```
+
 **5. Importer les formations** depuis `data/diplome_specialite.xlsx`
 
 ```bash
@@ -150,7 +152,18 @@ python manage.py createsuperuser
 python manage.py runserver
 ```
 
+Le serveur occupe le terminal : utiliser un second terminal (environnement activé) pour les autres commandes. Arrêt : `Ctrl + C`.
+
 Administration : http://127.0.0.1:8000/admin/
+
+**Vérifier l'API** (serveur lancé) :
+
+| URL | Résultat attendu |
+|---|---|
+| http://127.0.0.1:8000/api/health/ | `{"status": "ok"}` |
+| http://127.0.0.1:8000/api/formations/?q=informatique | Formations en informatique (28) |
+| http://127.0.0.1:8000/api/formations/?school=Sousse | Formations d'une école (nom ou ville) |
+| http://127.0.0.1:8000/api/formations/?q=reseaux&diploma_type=BTS | Recherche combinée par type de diplôme |
 
 ## 4. Frontend Angular
 
@@ -158,7 +171,13 @@ Administration : http://127.0.0.1:8000/admin/
 
 ## 5. Tests
 
-*À venir.*
+Depuis le dossier `backend`, avec l'infrastructure lancée :
+
+```bash
+python -m pytest
+```
+
+Les tests utilisent une base de données temporaire, créée puis supprimée automatiquement : les données réelles ne sont pas modifiées.
 
 ---
 
@@ -166,10 +185,17 @@ Administration : http://127.0.0.1:8000/admin/
 
 ```
 assistant-admission/
-├── docker-compose.yml   # Infrastructure : PostgreSQL + pgvector, Mailpit
-├── .env.example         # Modèle de configuration (sans secrets)
-├── backend/             # API Django REST (à venir)
-└── frontend/            # Application Angular (à venir)
+├── docker-compose.yml        # Infrastructure : PostgreSQL + pgvector, Mailpit
+├── .env.example              # Modèle de configuration (sans secrets)
+├── backend/                  # API Django REST
+│   ├── manage.py
+│   ├── requirements.txt      # Dépendances Python
+│   ├── pytest.ini            # Configuration des tests
+│   ├── config/               # Réglages et adresses (URL) du projet
+│   ├── catalog/              # Formations : normalisation, import, recherche, API
+│   ├── data/                 # Fichier Excel des formations
+│   └── tests/                # Tests automatisés
+└── frontend/                 # Application Angular (à venir)
 ```
 
 ---
@@ -183,4 +209,4 @@ assistant-admission/
 | Le mot de passe a été modifié dans `.env` après le premier lancement | PostgreSQL ne lit ce mot de passe qu'à la création de la base. Recréer la base (⚠️ efface les données) : `docker compose down -v` puis `docker compose up -d`. |
 | `port is already allocated` sur 5432 | Un autre PostgreSQL utilise déjà ce port : l'arrêter, ou remplacer `"5432:5432"` par `"5433:5432"` dans `docker-compose.yml` et mettre `POSTGRES_PORT=5433` dans `.env`. |
 | Windows bloque un exécutable de `.venv\Scripts` (« stratégie Device Guard » / App Control) | Lancer les outils via Python : `python -m django`, `python -m pip`, `python -m pytest`. Si une DLL est bloquée au premier lancement, relancer la commande. |
-| `python manage.py migrate` reste bloqué sans message | Sous Windows avec WSL2, utiliser `POSTGRES_HOST=127.0.0.1` au lieu de `localhost` dans `.env`. |
+| Les commandes Django (`migrate`, `runserver`…) mettent longtemps à répondre | Sous Windows avec WSL2, utiliser `POSTGRES_HOST=127.0.0.1` au lieu de `localhost` dans `.env`. Au tout premier lancement, Windows peut aussi vérifier les bibliothèques installées : patienter quelques secondes. |
