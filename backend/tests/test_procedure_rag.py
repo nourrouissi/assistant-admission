@@ -114,4 +114,6 @@ def test_chat_endpoint_returns_a_text_block(monkeypatch):
     monkeypatch.setattr(graph, "_agent_model", lambda: RunnableLambda(lambda _messages: AIMessage(content="Bonjour !")))
     response = APIClient().post("/api/chat/", {"session_id": "test-1", "message": "Bonjour"}, format="json")
     assert response.status_code == 200
-    assert response.json() == {"session_id": "test-1", "blocks": [{"type": "text", "text": "Bonjour !"}]}
+    assert response.json() == {
+        "session_id": "test-1", "blocks": [{"type": "text", "text": "Bonjour !"}], "registration": None,
+    }

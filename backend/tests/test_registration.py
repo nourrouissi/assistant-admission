@@ -508,3 +508,45 @@ def test_conversations_survive_a_restart_with_postgres(batiment, extractor, sett
         saver.conn.close()
         graph.get_graph.cache_clear()
     assert connection.settings_dict["NAME"] in conninfo()          # base de test, jamais la vraie base
+
+
+# --- Informations pour l'interface : étape en cours et issue de l'inscription ----------------------------------
+
+def chat_response(session, **payload):
+    response = APIClient().post("/api/chat/", {"session_id": session, **payload}, format="json")
+    assert response.status_code == 200, response.content
+    return response.json()
+
+
+def test_response_gives_the_registration_stage(batiment, extractor):
+    session = new_session()
+    assert chat_response(session, action="confirm")["registration"] is None
+    assert chat_response(session, action="register", formation_id=batiment.id)["registration"] == "collect"
+    assert chat_response(session, message=DETAILS)["registration"] == "summary"
+    assert chat_response(session, action="modify")["registration"] == "collect"
+    assert chat_response(session, action="cancel")["registration"] is None
+
+
+def test_confirmation_gives_a_created_result_with_the_new_status(batiment, extractor):
+    session = new_session()
+    to_summary(session, batiment)
+    response = chat_response(session, action="confirm")
+    result = block(response["blocks"], "registration_result")
+    assert result["outcome"] == "created"
+    assert result["status"] == "Nouvelle"
+    assert result["formation"]["id"] == batiment.id
+    assert response["registration"] is None
+
+
+@pytest.mark.parametrize("ending, outcome", [("duplicate", "duplicate"), ("cancel", "cancelled"), ("inactive", "unavailable")])
+def test_other_endings_give_their_result_and_save_nothing_new(batiment, extractor, ending, outcome):
+    session = new_session()
+    to_summary(session, batiment)
+    if ending == "duplicate":
+        existing_application(Formation.objects.exclude(id=batiment.id).first())
+    if ending == "inactive":
+        Formation.objects.filter(id=batiment.id).update(is_active=False)
+    blocks = chat(session, action="cancel" if ending == "cancel" else "confirm")
+    result = block(blocks, "registration_result")
+    assert result == {"type": "registration_result", "outcome": outcome}
+    assert Application.objects.count() == (1 if ending == "duplicate" else 0)

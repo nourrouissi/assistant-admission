@@ -181,9 +181,19 @@ def _say(text: str) -> AIMessage:
     return AIMessage(text, response_metadata={"blocks": [_text_block(text)]})
 
 
-def _end(text: str) -> Command:
-    """Fin de l'inscription : message au prospect, données de l'inscription effacées de l'état."""
-    return Command(update={"registration": None, "messages": [_say(text)]}, goto=END)
+# Issue d'une inscription, transmise à l'interface dans un bloc « registration_result »
+CREATED, DUPLICATE, UNAVAILABLE, CANCELLED = "created", "duplicate", "unavailable", "cancelled"
+
+
+def _end(text: str, outcome: str, **details) -> Command:
+    """
+    Fin de l'inscription : message au prospect, données de l'inscription effacées de l'état.
+    Le bloc « registration_result » donne l'issue à l'interface, sans qu'elle ait à lire le texte.
+    """
+    message = AIMessage(text, response_metadata={"blocks": [
+        _text_block(text), {"type": "registration_result", "outcome": outcome, **details},
+    ]})
+    return Command(update={"registration": None, "messages": [message]}, goto=END)
 
 
 def _enumerate(fields: list[str]) -> str:
@@ -230,7 +240,7 @@ def registration_ask(state: dict) -> Command:
     registration = state["registration"]
     card = _card(registration["formation_id"])
     if card is None:
-        return _end(UNAVAILABLE_TEXT)
+        return _end(UNAVAILABLE_TEXT, UNAVAILABLE)
     return Command(update={"messages": [_say(_question(registration, card))]}, goto=END)
 
 
@@ -242,7 +252,7 @@ def registration_collect(state: dict) -> Command:
     registration = state["registration"]
     formation_id = registration["formation_id"]
     if _card(formation_id) is None:
-        return _end(UNAVAILABLE_TEXT)
+        return _end(UNAVAILABLE_TEXT, UNAVAILABLE)
 
     message = state["messages"][-1]
     question = next(
@@ -258,7 +268,7 @@ def registration_collect(state: dict) -> Command:
         )
 
     if extracted.intent == "cancel":
-        return _end(CANCELLED_TEXT)
+        return _end(CANCELLED_TEXT, CANCELLED)
     given = {field: getattr(extracted, field) for field in FIELDS if getattr(extracted, field)}
     if extracted.intent == "other" and not given:
         return Command(goto="agent")
@@ -286,26 +296,29 @@ def registration_summary(state: dict) -> Command:
     registration = state["registration"]
     card = _card(registration["formation_id"])
     if card is None:
-        return _end(UNAVAILABLE_TEXT)
+        return _end(UNAVAILABLE_TEXT, UNAVAILABLE)
 
     answer = interrupt({"stage": "summary", "blocks": _summary_blocks(registration, card)})
     action = answer.get("action")
     if action == "modify":
         return Command(update={"registration": {**registration, "stage": "collect"}}, goto="registration_ask")
     if action != "confirm":
-        return _end(CANCELLED_TEXT)
+        return _end(CANCELLED_TEXT, CANCELLED)
 
     # Confirmation explicite par le bouton : seul chemin qui enregistre une demande.
     # Les doublons sont vérifiés ici seulement, jamais pendant la collecte.
     try:
-        submit_application(registration["values"], registration["formation_id"])
+        application = submit_application(registration["values"], registration["formation_id"])
     except DuplicateApplication:
-        return _end(DUPLICATE_TEXT.format(contact=settings.ADMISSIONS_CONTACT))
+        return _end(DUPLICATE_TEXT.format(contact=settings.ADMISSIONS_CONTACT), DUPLICATE)
     except FormationUnavailable:
-        return _end(UNAVAILABLE_TEXT)
-    return _end(CONFIRMED_TEXT.format(specialty=card["specialty"], school=card["school"]))
+        return _end(UNAVAILABLE_TEXT, UNAVAILABLE)
+    return _end(
+        CONFIRMED_TEXT.format(specialty=card["specialty"], school=card["school"]),
+        CREATED, status=application.get_status_display(), formation=card,
+    )
 
 
 def registration_cancel(state: dict) -> Command:
     """Bouton « Annuler » pendant la collecte."""
-    return _end(CANCELLED_TEXT)
+    return _end(CANCELLED_TEXT, CANCELLED)

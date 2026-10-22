@@ -227,6 +227,19 @@ def register(session_id: str, formation_id: int) -> list[dict]:
     return _run(session_id, {"event": "register", "registration": new_registration(formation_id)})
 
 
+def registration_stage(session_id: str) -> str | None:
+    """
+    Étape de l'inscription en cours, pour l'interface : « collect » (coordonnées demandées,
+    bouton Annuler), « summary » (récapitulatif en attente des boutons) ou None.
+    """
+    try:
+        registration = get_graph().get_state(_config(session_id)).values.get("registration")
+    except Exception:
+        logger.exception("Assistant : état de l'inscription illisible (session %s)", session_id)
+        return None
+    return registration["stage"] if registration else None
+
+
 def registration_action(session_id: str, action: str) -> list[dict]:
     """Bouton Confirmer / Modifier / Annuler du récapitulatif, ou Annuler pendant la collecte."""
     state = get_graph().get_state(_config(session_id))

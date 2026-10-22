@@ -244,10 +244,13 @@ Extrait de la réponse :
 curl -X POST http://127.0.0.1:8000/api/chat/   -H "Content-Type: application/json"   -d '{"session_id": "demo-1", "message": "Quels documents dois-je fournir pour déposer une candidature ?"}'
 ```
 
-Réponse : `{"session_id": "demo-1", "blocks": [...]}`, avec trois types de blocs :
+Réponse : `{"session_id": "demo-1", "blocks": [...], "registration": null}`, avec quatre types de blocs :
 - `{"type": "text", "text": "…"}` : texte affiché au prospect ;
 - `{"type": "formations", "items": [...]}` : cartes des formations (diplôme, spécialité, école, critères d'éligibilité, et le bloc `eligibility` quand les critères ont été vérifiés), au même format que l'API des formations. Chaque carte est affichée avec un bouton « S'inscrire » ;
 - `{"type": "registration_summary", "formation": {...}, "applicant": {...}, "actions": ["confirm", "modify", "cancel"]}` : récapitulatif de la demande et ses trois boutons.
+- `{"type": "registration_result", "outcome": "created" | "duplicate" | "unavailable" | "cancelled"}` : issue d'une inscription (demande enregistrée, doublon refusé, formation plus proposée, annulation). Pour `created`, le bloc contient aussi `status` (« Nouvelle ») et `formation` (la carte).
+
+`registration` indique l'étape de l'inscription en cours : `"collect"` (coordonnées demandées, bouton « Annuler » possible), `"summary"` (récapitulatif en attente des boutons) ou `null`. L'interface s'en sert sans avoir à interpréter les textes.
 
 Les questions sur la procédure d'admission (étapes, pièces justificatives, dates limites, frais, conditions générales d'éligibilité) sont traitées à partir du document de procédure uniquement. Si l'information est absente ou incomplète, l'assistant le signale et oriente vers le service des admissions (`ADMISSIONS_CONTACT`). Si aucun modèle de langage ne répond, un message fixe oriente vers ce même contact.
 

@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
-from .graph import register, registration_action, reply
+from .graph import register, registration_action, registration_stage, reply
 
 ACTIONS = ["register", "confirm", "modify", "cancel"]
 
@@ -33,10 +33,13 @@ class ChatView(APIView):
       - {"session_id": "...", "action": "...", ...}                bouton de l'interface :
           register (+ formation_id)  bouton « S'inscrire » d'une carte
           confirm | modify | cancel  boutons du récapitulatif (cancel aussi pendant la collecte)
-    Sortie : {"session_id": "...", "blocks": [...]}
+    Sortie : {"session_id": "...", "blocks": [...], "registration": "collect" | "summary" | null}
       - {"type": "text", "text": "..."}
       - {"type": "formations", "items": [cartes : diplôme, spécialité, école, critères (+ éligibilité)]}
       - {"type": "registration_summary", "formation": carte, "applicant": {...}, "actions": [...]}
+      - {"type": "registration_result", "outcome": "created" | "duplicate" | "unavailable" | "cancelled"}
+          fin de l'inscription ; si « created » : aussi "status" (« Nouvelle ») et "formation" (carte)
+      `registration` : étape de l'inscription en cours (collecte des coordonnées ou récapitulatif), sinon null.
 
     Nombre de requêtes limité par adresse IP (CHAT_RATE_LIMIT) : chaque message appelle un LLM
     et peut créer une demande d'inscription.
@@ -57,4 +60,4 @@ class ChatView(APIView):
             blocks = register(session_id, values["formation_id"])
         else:
             blocks = registration_action(session_id, values["action"])
-        return Response({"session_id": session_id, "blocks": blocks})
+        return Response({"session_id": session_id, "blocks": blocks, "registration": registration_stage(session_id)})
