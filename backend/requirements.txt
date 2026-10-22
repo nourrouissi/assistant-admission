@@ -1,0 +1,7 @@
+# Dépendances du backend – installer avec : pip install -r requirements.txt
+Django>=5.2,<6.0              # Framework web (version LTS)
+djangorestframework>=3.18     # API REST
+django-cors-headers>=4.9      # Autoriser le frontend Angular à appeler l'API
+python-dotenv>=1.2            # Lecture du fichier .env
+psycopg[binary]>=3.3          # Pilote PostgreSQL
+openpyxl>=3.1                 # Lecture du fichier Excel des formations

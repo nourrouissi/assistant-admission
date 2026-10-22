@@ -107,7 +107,34 @@ Les données sont conservées dans le volume Docker `pgdata`.
 
 ## 3. Backend Django
 
-*À venir.*
+Depuis le dossier `backend` :
+
+**1. Créer et activer l'environnement virtuel (Python 3.12)**
+
+```bash
+py -3.12 -m venv .venv          # macOS / Linux : python3.12 -m venv .venv
+.venv\Scripts\activate          # macOS / Linux : source .venv/bin/activate
+```
+
+**2. Installer les dépendances**
+
+```bash
+python -m pip install -r requirements.txt
+```
+
+**3. Générer la clé secrète Django**
+
+```bash
+python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
+```
+
+Copier la valeur affichée dans `DJANGO_SECRET_KEY` du fichier `.env`.
+
+**4. Créer les tables dans PostgreSQL** (l'infrastructure doit être lancée, voir étape 2)
+
+```bash
+python manage.py migrate
+```
 
 ## 4. Frontend Angular
 
@@ -139,3 +166,5 @@ assistant-admission/
 | Erreur d'authentification PostgreSQL alors que le mot de passe est correct | Vérifier que `.env` utilise des fins de ligne **LF** (VS Code : barre d'état, en bas à droite). Avec CRLF, un caractère invisible s'ajoute aux valeurs. |
 | Le mot de passe a été modifié dans `.env` après le premier lancement | PostgreSQL ne lit ce mot de passe qu'à la création de la base. Recréer la base (⚠️ efface les données) : `docker compose down -v` puis `docker compose up -d`. |
 | `port is already allocated` sur 5432 | Un autre PostgreSQL utilise déjà ce port : l'arrêter, ou remplacer `"5432:5432"` par `"5433:5432"` dans `docker-compose.yml` et mettre `POSTGRES_PORT=5433` dans `.env`. |
+| Windows bloque un exécutable de `.venv\Scripts` (« stratégie Device Guard » / App Control) | Lancer les outils via Python : `python -m django`, `python -m pip`, `python -m pytest`. Si une DLL est bloquée au premier lancement, relancer la commande. |
+| `python manage.py migrate` reste bloqué sans message | Sous Windows avec WSL2, utiliser `POSTGRES_HOST=127.0.0.1` au lieu de `localhost` dans `.env`. |
