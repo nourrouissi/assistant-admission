@@ -1,4 +1,4 @@
-import { criterion, diplomaShort, formatText } from './format';
+import { criterion, diplomaShort, formatText, tidy } from './format';
 import { FormationCard } from './models';
 
 describe('formatText', () => {
@@ -33,6 +33,16 @@ describe('formation card helpers', () => {
 
   it('translates « All » and keeps any other official criterion as written', () => {
     expect(criterion('All', 'Toutes nationalités')).toBe('Toutes nationalités');
-    expect(criterion('san bac', 'Toutes sections')).toBe('san bac');
+    expect(criterion('Tunisienne', 'Toutes nationalités')).toBe('Tunisienne');
+  });
+
+  it('fixes the typos of the formations file for display', () => {
+    expect(criterion('san bac', 'Toutes sections')).toBe('Sans bac');
+    expect(criterion('2ème avec succés ou CAP dans le même secteur', 'Tous niveaux'))
+      .toBe('2ème avec succès ou CAP dans le même secteur');
+    expect(criterion('bac ou BTP dans le même secteur', 'Tous niveaux')).toBe('Bac ou BTP dans le même secteur');
+    expect(criterion('Bac+ 2/ BTS', 'Tous niveaux')).toBe('Bac+2 / BTS');
+    expect(tidy('Diplome de LICENCE')).toBe('Diplôme de Licence');
+    expect(tidy('Licence en Batiment')).toBe('Licence en Bâtiment');
   });
 });

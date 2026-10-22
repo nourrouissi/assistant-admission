@@ -22,7 +22,7 @@
       <p class="eyebrow">Première étape franchie</p>
       <h3>Votre demande est transmise</h3>
       @if (block().formation; as formation) {
-        <p class="formation">{{ formation.specialty }} <span>·</span> {{ formation.school }}</p>
+        <p class="formation">{{ formation.specialty | tidy }} <span>·</span> {{ formation.school }}</p>
       }
       <span class="status"><span class="dot"></span>Statut : {{ block().status ?? 'Nouvelle' }}</span>
       <p class="note">

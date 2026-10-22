@@ -5,6 +5,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatIconModule } from '@angular/material/icon';
 
 import { SummaryAction, SummaryBlock } from '../core/models';
+import { TidyPipe } from '../core/tidy.pipe';
 import { CapMark } from '../shared/cap-mark';
 
 /**
@@ -13,7 +14,7 @@ import { CapMark } from '../shared/cap-mark';
  */
 @Component({
   selector: 'app-registration-letter',
-  imports: [MatButtonModule, MatCardModule, MatDividerModule, MatIconModule, CapMark],
+  imports: [MatButtonModule, MatCardModule, MatDividerModule, MatIconModule, CapMark, TidyPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './registration-letter.html',
   styleUrl: './registration-letter.scss',

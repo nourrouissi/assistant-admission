@@ -3,6 +3,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 
 import { ResultBlock } from '../core/models';
+import { TidyPipe } from '../core/tidy.pipe';
 import { CapMark } from '../shared/cap-mark';
 
 const OTHER_OUTCOMES = {
@@ -17,7 +18,7 @@ const OTHER_OUTCOMES = {
  */
 @Component({
   selector: 'app-registration-seal',
-  imports: [MatCardModule, MatIconModule, CapMark],
+  imports: [MatCardModule, MatIconModule, CapMark, TidyPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './registration-seal.html',
   styleUrl: './registration-seal.scss',

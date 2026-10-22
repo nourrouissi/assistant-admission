@@ -6,6 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 
 import { ELIGIBILITY_LABELS, criterion, diplomaShort } from '../core/format';
 import { FormationCard as Card } from '../core/models';
+import { TidyPipe } from '../core/tidy.pipe';
 
 /**
  * Carte d'une formation présentée comme un diplôme : ruban du type de diplôme, spécialité, école,
@@ -13,7 +14,7 @@ import { FormationCard as Card } from '../core/models';
  */
 @Component({
   selector: 'app-formation-card',
-  imports: [MatButtonModule, MatCardModule, MatDividerModule, MatIconModule],
+  imports: [MatButtonModule, MatCardModule, MatDividerModule, MatIconModule, TidyPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './formation-card.html',
   styleUrl: './formation-card.scss',

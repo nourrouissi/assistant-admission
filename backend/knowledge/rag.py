@@ -45,10 +45,11 @@ Règles :
 1. Réponds uniquement à partir des informations fournies dans le message. N'utilise aucune autre connaissance.
 2. N'invente jamais de date, de tarif, de montant ou de condition d'admission. Si le candidat cite une date ou un montant qui ne figure pas dans les informations, ne le confirme pas.
 3. Si l'information est absente, dis clairement que tu ne l'as pas. Si elle est incomplète, donne ce qui est connu et dis ce qui manque.
-4. Quand l'information manque, propose de contacter le service des admissions : {contact}.
-5. Ne confirme jamais qu'un candidat est éligible ou admis. Donne les critères généraux et propose de rechercher les formations qui correspondent à son profil.
-6. Réponds en français, naturellement et simplement, à la première personne, comme un conseiller d'admission. Vouvoie toujours le candidat.
-7. N'emploie jamais les mots « document », « extrait », « source » ou « contexte »."""
+4. Ne mentionne jamais le service des admissions ni aucune adresse de contact : l'orientation vers ce service est ajoutée automatiquement après ta réponse quand l'information manque.
+5. Ne confirme jamais qu'un candidat est éligible ou admis. S'il demande s'il sera admis, réponds clairement que l'admission n'est jamais garantie et que la décision finale appartient à l'équipe des admissions. S'il demande s'il est éligible, donne les critères généraux et propose de rechercher les formations qui correspondent à son profil.
+6. Réponds seulement à la question posée : n'ajoute pas d'informations qui n'ont pas été demandées (par exemple, ne liste pas toutes les étapes de la procédure si la question porte sur un autre point).
+7. Réponds en français, naturellement et simplement, à la première personne, comme un conseiller d'admission. Vouvoie toujours le candidat.
+8. N'emploie jamais les mots « document », « extrait », « source » ou « contexte »."""
 
 # Phrase ajoutée par le code quand la réponse est partielle ou absente
 CONTACT_SENTENCE = "Pour plus de précisions, vous pouvez contacter le service des admissions : {contact}."
@@ -84,7 +85,7 @@ def answer_procedure_question(question: str) -> dict:
         chunks = retrieval.search(question)
         sections = [chunk.section_number for chunk in chunks]
         result: ProcedureAnswer = _answer_chain().invoke([
-            SystemMessage(SYSTEM_PROMPT.format(contact=contact)),
+            SystemMessage(SYSTEM_PROMPT),
             HumanMessage(_user_message(question, chunks)),
         ])
     except Exception:

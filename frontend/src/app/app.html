@@ -45,7 +45,9 @@
           @if (store.pending()) {
             <div class="thinking">
               <span class="thinking-cap"><app-cap-mark [size]="22" [swing]="true" /></span>
-              <span class="thinking-text">Cap Diplôme consulte les documents des admissions…</span>
+              <span class="thinking-dots" role="status" aria-label="Cap Diplôme rédige sa réponse">
+                <span></span><span></span><span></span>
+              </span>
             </div>
           }
         </div>

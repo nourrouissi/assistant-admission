@@ -1,14 +1,14 @@
-<mat-card appearance="outlined" class="diploma" [attr.aria-label]="card().specialty + ', ' + card().diploma + ', ' + card().school">
+<mat-card appearance="outlined" class="diploma" [attr.aria-label]="(card().specialty | tidy) + ', ' + (card().diploma | tidy) + ', ' + card().school">
   <!-- Ruban suspendu : sigle du diplôme et sceau -->
-  <span class="ribbon" [title]="card().diploma" aria-hidden="true">
+  <span class="ribbon" [title]="card().diploma | tidy" aria-hidden="true">
     <span class="ribbon-text">{{ short() }}</span>
   </span>
 
   <div class="frame">
     <mat-card-header>
       <mat-card-subtitle class="overline">Diplôme</mat-card-subtitle>
-      <mat-card-title class="specialty">{{ card().specialty }}</mat-card-title>
-      <mat-card-subtitle class="label">{{ card().diploma }}</mat-card-subtitle>
+      <mat-card-title class="specialty">{{ card().specialty | tidy }}</mat-card-title>
+      <mat-card-subtitle class="label">{{ card().diploma | tidy }}</mat-card-subtitle>
     </mat-card-header>
 
     <mat-card-content>

@@ -12,9 +12,9 @@
   <mat-card-content>
     <section class="formation">
       <p class="label">Formation demandée</p>
-      <p class="specialty">{{ block().formation.specialty }}</p>
+      <p class="specialty">{{ block().formation.specialty | tidy }}</p>
       <p class="meta">
-        <span>{{ block().formation.diploma }}</span>
+        <span>{{ block().formation.diploma | tidy }}</span>
         <span class="dot">•</span>
         <span>{{ block().formation.school }}</span>
       </p>

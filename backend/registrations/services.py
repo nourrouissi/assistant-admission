@@ -74,7 +74,7 @@ def notify_team(application: Application) -> None:
         f"Téléphone : {application.phone}",
         f"Formation : {formation.diploma_label} – {formation.specialty}",
         f"École : {formation.school}",
-        f"Date : {application.created_at:%d/%m/%Y %H:%M}",
+        f"Date : {timezone.localtime(application.created_at):%d/%m/%Y %H:%M}",     # heure de Tunis (TIME_ZONE)
     ])
     try:
         send_mail(

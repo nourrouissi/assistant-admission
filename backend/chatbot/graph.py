@@ -204,7 +204,8 @@ def _run(session_id: str, graph_input) -> list[dict]:
         before = len(graph.get_state(config).values.get("messages", []))
         result = graph.invoke(graph_input, config=config)
     except Exception:
-        logger.exception("Assistant : aucun modèle n'a pu répondre (session %s)", session_id)
+        # Modèles indisponibles, base de données, etc. : le détail est dans la trace ci-dessous
+        logger.exception("Assistant : message non traité (session %s)", session_id)
         return [{"type": "text", "text": _unavailable()}]
 
     blocks: list[dict] = []
@@ -214,6 +215,9 @@ def _run(session_id: str, graph_input) -> list[dict]:
             blocks += message.response_metadata.get("blocks") or ([{"type": "text", "text": text}] if text else [])
     for pending in result.get("__interrupt__", []):
         blocks += pending.value["blocks"]
+    if not blocks:      # jamais de tour sans réponse affichée
+        logger.error("Assistant : aucune réponse produite (session %s)", session_id)
+        return [{"type": "text", "text": _unavailable()}]
     return blocks
 
 

@@ -71,9 +71,33 @@ export function diplomaShort(card: FormationCard): string {
   return card.diploma.split(/\s+/).map((word) => word[0] ?? '').join('').slice(0, 4).toUpperCase();
 }
 
-/** « All » dans le fichier des formations signifie « aucune exigence ». */
+/**
+ * Fautes de frappe du fichier des formations, corrigées à l'affichage seulement :
+ * la base garde le texte officiel, et le calcul d'éligibilité n'en dépend pas.
+ */
+const TYPOS: [RegExp, string][] = [
+  [/\bsan bac\b/gi, 'sans bac'],
+  [/\bsuccés\b/gi, 'succès'],
+  [/\bBac\+ 2\/ BTS\b/g, 'Bac+2 / BTS'],
+  [/\bMathématique\b/g, 'Mathématiques'],
+  [/\bDiplome\b/g, 'Diplôme'],
+  [/\bdiplôme de LICENCE\b/gi, 'Diplôme de Licence'],
+  [/\bINGENIEUR\b/g, 'Ingénieur'],
+  [/\bBatiment\b/g, 'Bâtiment'],
+  [/\bControles\b/g, 'Contrôles'],
+  [/\bControle\b/g, 'Contrôle'],
+  [/\bpublication assisté\b/g, 'publication assistée'],
+];
+
+/** Texte du fichier des formations, sans ses fautes de frappe ni espaces en trop, avec une majuscule initiale. */
+export function tidy(value: string): string {
+  const text = TYPOS.reduce((result, [typo, fix]) => result.replace(typo, fix), value.trim().replace(/\s+/g, ' '));
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+/** Critère d'une formation : « All » dans le fichier signifie « aucune exigence ». */
 export function criterion(value: string, whenAll: string): string {
-  return value.trim().toLowerCase() === 'all' ? whenAll : value;
+  return value.trim().toLowerCase() === 'all' ? whenAll : tidy(value);
 }
 
 export const ELIGIBILITY_LABELS = {

@@ -205,10 +205,15 @@
     filled-label-text-color: #ffffff,
     filled-container-shape: 999px,
     filled-container-height: 42px,
+    // Pendant qu'une réponse est attendue : même bouton, atténué (pas de gris)
+    filled-disabled-container-color: var(--gown),
+    filled-disabled-label-text-color: #ffffff,
   ));
   font-weight: 700;
   letter-spacing: 0.02em;
-  transition: background 0.3s, box-shadow 0.3s;
+  transition: background 0.3s, box-shadow 0.3s, opacity 0.3s;
+
+  &:disabled { opacity: 0.55; cursor: progress; }
 
   &:not(:disabled):hover {
     background: var(--red);

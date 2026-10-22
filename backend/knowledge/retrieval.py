@@ -8,6 +8,7 @@ en local : il exige le préfixe « passage: » pour les textes indexés et
 
 from __future__ import annotations
 
+import logging
 from functools import lru_cache
 
 from django.conf import settings
@@ -15,6 +16,8 @@ from django.core.exceptions import ImproperlyConfigured
 from pgvector.django import CosineDistance
 
 from .models import EMBEDDING_DIMENSIONS, ProcedureChunk
+
+logger = logging.getLogger(__name__)
 
 # Nombre d'extraits transmis au LLM
 TOP_K = 3
@@ -30,6 +33,14 @@ def _encoder():
     from sentence_transformers import SentenceTransformer  # import lourd : seulement si nécessaire
 
     return SentenceTransformer(settings.EMBEDDINGS_MODEL)
+
+
+def warm_up() -> None:
+    """Charge le modèle d'embeddings au démarrage du serveur : la première question n'attend pas."""
+    try:
+        embed_query("préchargement")
+    except Exception:
+        logger.exception("Embeddings : préchargement impossible (il sera retenté à la première question)")
 
 
 def _embed(text: str) -> list[float]:
