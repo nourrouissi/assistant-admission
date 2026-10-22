@@ -135,6 +135,22 @@ Copier la valeur affichée dans `DJANGO_SECRET_KEY` du fichier `.env`.
 ```bash
 python manage.py migrate
 ```
+**5. Importer les formations** depuis `data/diplome_specialite.xlsx`
+
+```bash
+python manage.py import_formations
+```
+
+Résultat attendu : `89 formations importées`, suivi d'un rapport des anomalies détectées dans le fichier (lignes à faire vérifier par l'équipe des admissions ; elles sont importées sans modification). La commande peut être relancée sans risque : elle met à jour les formations existantes au lieu de les dupliquer.
+
+**6. Créer un compte d'administration** et lancer le serveur
+
+```bash
+python manage.py createsuperuser
+python manage.py runserver
+```
+
+Administration : http://127.0.0.1:8000/admin/
 
 ## 4. Frontend Angular
 
