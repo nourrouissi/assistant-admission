@@ -1,0 +1,50 @@
+<article class="letter" [class.closed]="!open()" aria-label="Récapitulatif de votre demande d'inscription">
+  <header class="head">
+    <app-sun-mark [size]="38" class="sun" />
+    <div>
+      <p class="eyebrow">Récapitulatif</p>
+      <h3>Demande d'inscription</h3>
+    </div>
+  </header>
+
+  <section class="formation">
+    <p class="label">Formation choisie</p>
+    <p class="specialty">{{ block().formation.specialty }}</p>
+    <p class="meta">{{ block().formation.diploma }} · {{ block().formation.school }}</p>
+  </section>
+
+  <div class="perforation" aria-hidden="true"></div>
+
+  <dl class="applicant">
+    @for (field of fields(); track field.label) {
+      <div>
+        <dt><mat-icon>{{ field.icon }}</mat-icon>{{ field.label }}</dt>
+        <dd>{{ field.value }}</dd>
+      </div>
+    }
+  </dl>
+
+  @if (open()) {
+    <footer class="actions">
+      <p class="note">
+        <mat-icon>info</mat-icon>
+        Vérifiez vos informations : la demande n'est enregistrée qu'après votre confirmation.
+      </p>
+      <div class="buttons">
+        <button mat-flat-button class="confirm" type="button" [disabled]="pending()" (click)="act.emit('confirm')">
+          <mat-icon>verified</mat-icon>
+          Confirmer
+        </button>
+        <button mat-stroked-button class="modify" type="button" [disabled]="pending()" (click)="act.emit('modify')">
+          <mat-icon>edit</mat-icon>
+          Modifier
+        </button>
+        <button mat-button class="cancel" type="button" [disabled]="pending()" (click)="act.emit('cancel')">
+          Annuler
+        </button>
+      </div>
+    </footer>
+  } @else {
+    <footer class="archived"><mat-icon>history</mat-icon>Ce récapitulatif n'est plus en attente.</footer>
+  }
+</article>

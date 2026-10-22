@@ -1,0 +1,40 @@
+<article class="card" [attr.aria-label]="card().specialty + ', ' + card().diploma + ', ' + card().school">
+  <header class="band">
+    <span class="school"><mat-icon>location_on</mat-icon>{{ card().school }}</span>
+    <span class="seal" [title]="card().diploma">
+      <span>{{ short() }}</span>
+    </span>
+  </header>
+
+  <div class="body">
+    <p class="diploma">{{ card().diploma }}</p>
+    <h3 class="specialty">{{ card().specialty }}</h3>
+
+    <dl class="criteria">
+      @for (item of criteria(); track item.label) {
+        <div>
+          <dt><mat-icon>{{ item.icon }}</mat-icon>{{ item.label }}</dt>
+          <dd>{{ item.value }}</dd>
+        </div>
+      }
+    </dl>
+
+    @if (card().criteria_under_review) {
+      <p class="review"><mat-icon>pending</mat-icon>Critères en cours de vérification par l'équipe des admissions</p>
+    }
+
+    @if (verdict(); as v) {
+      <div class="verdict" [attr.data-status]="v.status">
+        <span class="stamp"><mat-icon>{{ v.icon }}</mat-icon>{{ v.label }}</span>
+        <p>{{ v.message }}</p>
+      </div>
+    }
+  </div>
+
+  <footer>
+    <button mat-flat-button class="enroll" type="button" [disabled]="disabled()" (click)="register.emit(card())">
+      S'inscrire
+      <mat-icon iconPositionEnd>arrow_forward</mat-icon>
+    </button>
+  </footer>
+</article>

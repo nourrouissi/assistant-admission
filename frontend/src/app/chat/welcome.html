@@ -1,0 +1,33 @@
+<section class="welcome">
+  <div class="emblem" aria-hidden="true">
+    <span class="halo"></span>
+    <app-sun-mark [size]="76" [spin]="true" />
+  </div>
+
+  <p class="eyebrow">Assistant d'admission</p>
+  <h1>Bienvenue, <em>futur·e étudiant·e</em></h1>
+  <p class="lead">
+    Je suis Lumen. Je vous éclaire sur la procédure d'admission, je vous aide à trouver la formation
+    qui vous ressemble et je vous accompagne jusqu'à votre demande d'inscription.
+  </p>
+
+  <div class="doors">
+    @for (door of doors; track door.title; let index = $index) {
+      <button type="button" class="door" [style.animation-delay.ms]="200 + index * 110" (click)="pick.emit(door.prompt)">
+        <span class="number">0{{ index + 1 }}</span>
+        <span class="icon"><mat-icon>{{ door.icon }}</mat-icon></span>
+        <span class="title">{{ door.title }}</span>
+        <span class="text">{{ door.text }}</span>
+        <span class="prompt">« {{ door.prompt }} »</span>
+        <mat-icon class="arrow">arrow_forward</mat-icon>
+      </button>
+    }
+  </div>
+
+  <div class="examples">
+    <span class="label">Essayez aussi</span>
+    @for (example of examples; track example) {
+      <button type="button" class="chip" (click)="pick.emit(example)">{{ example }}</button>
+    }
+  </div>
+</section>

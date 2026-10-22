@@ -1,0 +1,180 @@
+@use '@angular/material' as mat;
+
+:host { display: block; }
+
+.letter {
+  max-width: 560px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  overflow: hidden;
+  box-shadow: var(--shadow-lift);
+  animation: unfold 0.7s var(--ease-out) both;
+  transition: opacity 0.4s, filter 0.4s;
+
+  &.closed { opacity: 0.62; filter: saturate(0.6); box-shadow: var(--shadow-soft); }
+}
+
+@keyframes unfold {
+  from { opacity: 0; transform: translateY(16px) rotateX(8deg); transform-origin: top; }
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 22px;
+  color: var(--ivory);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(201, 162, 74, 0.28), transparent 55%),
+    linear-gradient(135deg, var(--burgundy), var(--burgundy-deep));
+
+  .sun { color: var(--gold); }
+  h3 { font-size: 1.3rem; }
+}
+
+.eyebrow {
+  margin: 0 0 2px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--gold-light);
+}
+
+.formation {
+  padding: 18px 22px 14px;
+  p { margin: 0; }
+}
+
+.label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gold-deep);
+}
+
+.specialty {
+  margin-top: 4px !important;
+  font-family: var(--font-display);
+  font-size: 1.22rem;
+  font-weight: 600;
+  color: var(--burgundy-deep);
+}
+
+.meta { margin-top: 2px !important; font-size: 0.86rem; color: var(--ink-soft); }
+
+// Bord perforé façon ticket, entre la formation et les coordonnées
+.perforation {
+  position: relative;
+  height: 22px;
+  background:
+    radial-gradient(circle at 0 50%, var(--ivory) 10px, transparent 10.5px),
+    radial-gradient(circle at 100% 50%, var(--ivory) 10px, transparent 10.5px);
+
+  &::after {
+    content: '';
+    position: absolute;
+    left: 20px;
+    right: 20px;
+    top: 50%;
+    border-top: 2px dashed var(--line-strong);
+  }
+}
+
+.applicant {
+  margin: 0;
+  padding: 10px 22px 6px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 20px;
+
+  dt {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+
+    mat-icon { font-size: 16px; width: 16px; height: 16px; color: var(--gold-deep); }
+  }
+
+  dd {
+    margin: 4px 0 0;
+    padding-bottom: 6px;
+    border-bottom: 1px dotted var(--line-strong);
+    font-size: 0.96rem;
+    font-weight: 500;
+    color: var(--ink);
+    overflow-wrap: anywhere;
+  }
+}
+
+.actions { padding: 14px 22px 22px; }
+
+.note {
+  margin: 0 0 14px;
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--ink-soft);
+
+  mat-icon { flex: none; font-size: 17px; width: 17px; height: 17px; color: var(--gold-deep); }
+}
+
+.buttons { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+
+.confirm {
+  @include mat.button-overrides((
+    filled-container-color: var(--gold),
+    filled-label-text-color: var(--burgundy-night),
+    filled-container-shape: 999px,
+    filled-container-height: 46px,
+    filled-horizontal-padding: 24px,
+  ));
+  background-image: linear-gradient(135deg, #e3c676, var(--gold) 50%, #b08a35);
+  font-weight: 700;
+  box-shadow: 0 10px 22px -10px rgba(176, 138, 53, 0.85);
+  transition: transform 0.25s var(--ease-out), box-shadow 0.25s;
+
+  &:not(:disabled):hover { transform: translateY(-2px); box-shadow: 0 14px 26px -10px rgba(176, 138, 53, 0.95); }
+}
+
+.modify {
+  @include mat.button-overrides((
+    outlined-label-text-color: var(--burgundy),
+    outlined-outline-color: var(--line-strong),
+    outlined-container-shape: 999px,
+    outlined-container-height: 46px,
+  ));
+  font-weight: 600;
+}
+
+.cancel {
+  @include mat.button-overrides((
+    text-label-text-color: var(--ink-soft),
+    text-container-shape: 999px,
+    text-container-height: 46px,
+  ));
+}
+
+.archived {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 22px 16px;
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+  mat-icon { font-size: 17px; width: 17px; height: 17px; }
+}
+
+@media (max-width: 480px) {
+  .applicant { grid-template-columns: 1fr; }
+  .buttons > * { flex: 1 1 auto; }
+}

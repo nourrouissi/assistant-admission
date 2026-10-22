@@ -6,9 +6,7 @@ Assistant conversationnel qui accompagne les prospects de l'information jusqu'à
 2. **Recherche de formations** : propositions issues de la base des formations selon le diplôme souhaité, la spécialité ou l'école, affichées dès que possible sous forme de cartes (diplôme, spécialité, école, critères d'éligibilité), puis affinées au fil de la conversation. L'assistant peut demander le niveau d'études, la nationalité ou la nature du baccalauréat pour vérifier les critères, mais ne confirme jamais une éligibilité sans les informations nécessaires.
 3. **Inscription conversationnelle** : l'assistant demande le nom, le prénom, l'e-mail et le téléphone au fil de la conversation (le modèle de langage les extrait des messages, le code les valide) ; choix d'une formation existante, avec demande de précision si plusieurs correspondent ; récapitulatif et enregistrement **uniquement après confirmation explicite**, avec le statut « Nouvelle » et sans doublon (même e-mail ou même téléphone) ; puis notification par e-mail à l'équipe des admissions et confirmation au prospect. L'admission n'est jamais garantie : la décision finale appartient à l'équipe des admissions.
 
-**Stack :** Django REST Framework · Angular · LangGraph · Gemini via API compatible OpenAI (secours : second modèle Gemini, puis Groq) · embeddings multilingual-e5 (exécutés en local) · PostgreSQL + pgvector · Docker
-
-> 🚧 Projet en cours de développement : les sections marquées « *à venir* » seront complétées au fil des étapes.
+**Stack :** Django REST Framework · Angular 21 + Angular Material · LangGraph · Gemini via API compatible OpenAI (secours : second modèle Gemini, puis Groq) · embeddings multilingual-e5 (exécutés en local) · PostgreSQL + pgvector · Docker
 
 ---
 
@@ -30,7 +28,7 @@ Assistant conversationnel qui accompagne les prospects de l'information jusqu'à
 | Outil | Version testée | Installation |
 |---|---|---|
 | Python | 3.12 | https://www.python.org/downloads/ |
-| Node.js | 24 (LTS) | https://nodejs.org/ |
+| Node.js | 24.13 (Angular 21 : 20.19+, 22.12+ ou 24+) | https://nodejs.org/ |
 | Angular CLI | 21 | `npm install -g @angular/cli` |
 | Git | 2.55 | https://git-scm.com/ |
 | Docker + Docker Compose | 29 / 2.40 | https://docs.docker.com/get-docker/ |
@@ -295,7 +293,36 @@ Conversations et limite de requêtes :
 
 ## 4. Frontend Angular
 
-*À venir.*
+L'interface s'appelle **Lumen** (« lumière » en latin) : l'assistant qui éclaire le parcours d'admission. Palette bordeaux, ivoire et or, titres en *Fraunces* et texte en *Inter*.
+
+Depuis le dossier `frontend`, avec le backend lancé sur le port 8000 :
+
+```bash
+npm install
+npm start          # équivaut à ng serve
+```
+
+Ouvrir http://localhost:4200. En développement, `proxy.conf.json` redirige `/api` vers `http://127.0.0.1:8000` : pas de configuration CORS supplémentaire.
+
+Ce que l'interface affiche, à partir des blocs renvoyés par `/api/chat/` (elle n'interprète jamais les textes) :
+
+| Élément | Rôle |
+|---|---|
+| Écran d'accueil | Trois portes d'entrée (procédure, formations, candidature) et des exemples de questions |
+| Fil « Votre parcours » | Découvrir → Vérifier → Candidater, déduit des blocs reçus et du champ `registration` |
+| Cartes de formation | Sceau du type de diplôme, spécialité, école, critères officiels ; tampon d'éligibilité (critères remplis, à confirmer, infos manquantes, critère non rempli) ; bouton « S'inscrire » |
+| Récapitulatif | Lettre de candidature avec les boutons Confirmer / Modifier / Annuler ; seul le dernier récapitulatif en attente reste actif |
+| Bandeau d'inscription | Pendant la collecte des coordonnées : rappel de l'étape et bouton « Annuler » |
+| Confirmation | Sceau de cire avec le statut « Nouvelle » (`registration_result` = `created`) ; étiquette discrète pour un doublon, une formation indisponible ou une annulation |
+| Erreurs | Message clair pour la limite de requêtes (429) ou un serveur injoignable |
+
+La conversation (identifiant de session et messages affichés) est gardée dans le navigateur : un rafraîchissement de la page ne l'efface pas. « Nouvelle conversation » repart de zéro.
+
+Organisation du code (`frontend/src/app`) :
+- `core/` : contrat de l'API (`models.ts`), appel HTTP (`chat-api.ts`), état de la conversation en signals (`chat-store.ts`), parcours (`journey.ts`), mise en forme des textes (`format.ts`) ;
+- `chat/` : accueil, message, zone de saisie ;
+- `blocks/` : carte de formation, carrousel, récapitulatif, sceau de confirmation ;
+- `shared/` : soleil animé (signature visuelle), fil du parcours.
 
 ## 5. Tests
 
@@ -306,6 +333,12 @@ python -m pytest
 ```
 
 Les tests utilisent une base de données temporaire, créée puis supprimée automatiquement : les données réelles ne sont pas modifiées. Les modèles de langage sont simulés : les tests ne font aucun appel réseau.
+
+Depuis le dossier `frontend` (Vitest, sans navigateur ni backend) :
+
+```bash
+npm test -- --watch=false
+```
 
 ---
 
@@ -326,7 +359,9 @@ assistant-admission/
 │   ├── chatbot/              # Assistant : modèles de langage, agent LangGraph, inscription, mémoire, API /api/chat/
 │   ├── data/                 # Fichier Excel des formations et document de procédure
 │   └── tests/                # Tests automatisés
-└── frontend/                 # Application Angular (à venir)
+└── frontend/                 # Application Angular « Lumen »
+    ├── proxy.conf.json       # /api -> Django (développement)
+    └── src/app/              # core, chat, blocks, shared (voir section 4)
 ```
 
 ---

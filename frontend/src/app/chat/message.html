@@ -1,0 +1,52 @@
+@switch (entry().role) {
+  @case ('user') {
+    <div class="row user" [class.action]="entry().action">
+      @for (block of entry().blocks; track $index) {
+        @if (block.type === 'text') {
+          <p class="bubble">
+            @if (entry().action) {
+              <mat-icon>touch_app</mat-icon>
+            }
+            {{ block.text }}
+          </p>
+        }
+      }
+    </div>
+  }
+
+  @case ('notice') {
+    <div class="row notice" role="alert">
+      @for (block of entry().blocks; track $index) {
+        @if (block.type === 'text') {
+          <p><mat-icon>error</mat-icon>{{ block.text }}</p>
+        }
+      }
+    </div>
+  }
+
+  @default {
+    <div class="row assistant">
+      <span class="avatar" aria-hidden="true"><app-sun-mark [size]="22" [ring]="false" /></span>
+      <div class="content">
+        <span class="sr-only">Lumen :</span>
+        @for (block of entry().blocks; track $index) {
+          @switch (block.type) {
+            @case ('text') {
+              <div class="bubble" [innerHTML]="formatText(block.text)"></div>
+            }
+            @case ('formations') {
+              <app-formations-carousel [items]="block.items" [disabled]="pending()" (register)="register.emit($event)" />
+            }
+            @case ('registration_summary') {
+              <app-registration-letter [block]="block" [open]="summaryOpen()" [pending]="pending()"
+                                       (act)="act.emit($event)" />
+            }
+            @case ('registration_result') {
+              <app-registration-seal [block]="block" />
+            }
+          }
+        }
+      </div>
+    </div>
+  }
+}

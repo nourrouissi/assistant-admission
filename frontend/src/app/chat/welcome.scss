@@ -1,0 +1,222 @@
+:host { display: block; }
+
+.welcome {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: calc(4vh + 28px) 0 24px;
+  text-align: center;
+}
+
+// --- Emblème ------------------------------------------------------------------------------------------
+.emblem {
+  position: relative;
+  width: 132px;
+  height: 132px;
+  margin: 0 auto 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--gold);
+  background:
+    radial-gradient(circle at 30% 25%, #8a2a3e, var(--burgundy) 45%, var(--burgundy-night));
+  box-shadow: 0 24px 50px -20px rgba(74, 19, 32, 0.7), inset 0 0 0 1px rgba(232, 211, 155, 0.3);
+  animation: rise 0.8s var(--ease-out) both;
+}
+
+.halo {
+  position: absolute;
+  inset: -16px;
+  border-radius: 50%;
+  border: 1px solid rgba(201, 162, 74, 0.35);
+  animation: halo 4s ease-in-out infinite;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: -14px;
+    border-radius: 50%;
+    border: 1px dashed rgba(201, 162, 74, 0.25);
+  }
+}
+
+@keyframes halo { 50% { transform: scale(1.05); opacity: 0.6; } }
+
+.eyebrow {
+  margin: 0 0 10px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--gold-deep);
+  animation: rise 0.8s var(--ease-out) 0.05s both;
+}
+
+h1 {
+  font-size: clamp(2rem, 4.4vw, 3.1rem);
+  line-height: 1.1;
+  color: var(--burgundy-deep);
+  animation: rise 0.8s var(--ease-out) 0.1s both;
+
+  em {
+    font-style: italic;
+    font-weight: 500;
+    background: linear-gradient(120deg, var(--burgundy) 20%, var(--gold-deep));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+}
+
+.lead {
+  max-width: 600px;
+  margin: 16px auto 0;
+  font-size: 1.02rem;
+  line-height: 1.65;
+  color: var(--ink-soft);
+  animation: rise 0.8s var(--ease-out) 0.15s both;
+}
+
+// --- Les trois portes ---------------------------------------------------------------------------------
+.doors {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 40px;
+  text-align: left;
+}
+
+.door {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 22px 22px 20px;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background: var(--paper);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  box-shadow: var(--shadow-soft);
+  animation: rise 0.7s var(--ease-out) both;
+  transition: transform 0.35s var(--ease-out), box-shadow 0.35s var(--ease-out), border-color 0.35s;
+
+  // Filet doré qui se déploie au survol
+  &::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 3px;
+    width: 0;
+    background: linear-gradient(90deg, var(--gold), var(--gold-light));
+    transition: width 0.5s var(--ease-out);
+  }
+
+  &:hover, &:focus-visible {
+    transform: translateY(-6px);
+    box-shadow: var(--shadow-lift);
+    border-color: rgba(201, 162, 74, 0.5);
+    &::before { width: 100%; }
+    .arrow { opacity: 1; transform: translateX(0); }
+    .icon { background: var(--burgundy); color: var(--gold-light); }
+  }
+}
+
+.number {
+  position: absolute;
+  right: 20px;
+  top: 14px;
+  font-family: var(--font-display);
+  font-size: 2.2rem;
+  font-weight: 500;
+  font-style: italic;
+  color: rgba(201, 162, 74, 0.35);
+}
+
+.icon {
+  width: 46px;
+  height: 46px;
+  margin-bottom: 6px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  color: var(--burgundy);
+  background: var(--burgundy-soft);
+  transition: background 0.35s, color 0.35s;
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: 1.18rem;
+  font-weight: 600;
+  color: var(--burgundy-deep);
+}
+
+.text { font-size: 0.88rem; line-height: 1.5; color: var(--ink-soft); }
+
+.prompt {
+  margin-top: 6px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--line-strong);
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: var(--ink);
+}
+
+.arrow {
+  position: absolute;
+  right: 18px;
+  bottom: 18px;
+  color: var(--gold-deep);
+  opacity: 0;
+  transform: translateX(-8px);
+  transition: all 0.35s var(--ease-out);
+}
+
+// --- Exemples -----------------------------------------------------------------------------------------
+.examples {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  margin-top: 30px;
+  animation: rise 0.8s var(--ease-out) 0.55s both;
+}
+
+.label {
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.chip {
+  padding: 9px 15px;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  background: rgba(255, 255, 255, 0.7);
+  color: var(--burgundy-deep);
+  font: inherit;
+  font-size: 0.86rem;
+  cursor: pointer;
+  transition: all 0.25s var(--ease-out);
+
+  &:hover { border-color: var(--gold); background: var(--gold-soft); transform: translateY(-2px); }
+}
+
+@keyframes rise { from { opacity: 0; transform: translateY(14px); } }
+
+@media (max-width: 860px) {
+  .doors { grid-template-columns: 1fr; gap: 12px; margin-top: 28px; }
+  .door { padding: 18px; }
+  .prompt { display: none; }
+  .arrow { opacity: 1; transform: none; top: 50%; bottom: auto; margin-top: -12px; }
+  .number { display: none; }
+}

@@ -1,0 +1,93 @@
+<div class="shell">
+  <!-- Colonne du parcours (ordinateur) -->
+  <aside class="rail">
+    <div class="brand">
+      <app-sun-mark [size]="46" class="brand-sun" />
+      <div>
+        <p class="brand-name">Lumen</p>
+        <p class="brand-tagline">Votre guide vers l'admission</p>
+      </div>
+    </div>
+    <div class="rule" aria-hidden="true"></div>
+
+    <p class="rail-label">Votre parcours</p>
+    <app-journey [steps]="store.journey()" />
+
+    <div class="rail-foot">
+      <p class="promise">
+        <mat-icon>gavel</mat-icon>
+        <span>Lumen vous informe et vous accompagne. La décision d'admission appartient toujours à l'équipe des admissions.</span>
+      </p>
+      @if (store.started()) {
+        <button mat-stroked-button class="restart" type="button" (click)="restart()">
+          <mat-icon>add_comment</mat-icon>
+          Nouvelle conversation
+        </button>
+      }
+    </div>
+
+    <app-sun-mark class="rail-sun" [size]="440" [spin]="true" aria-hidden="true" />
+  </aside>
+
+  <main class="stage">
+    <!-- Barre du haut (tablette et mobile) -->
+    <header class="topbar">
+      <div class="topbar-brand">
+        <span class="topbar-sun"><app-sun-mark [size]="22" [ring]="false" /></span>
+        <span class="brand-name">Lumen</span>
+      </div>
+      <app-journey [steps]="store.journey()" [compact]="true" />
+      @if (store.started()) {
+        <button mat-icon-button type="button" aria-label="Nouvelle conversation" matTooltip="Nouvelle conversation"
+                (click)="restart()">
+          <mat-icon>add_comment</mat-icon>
+        </button>
+      }
+    </header>
+
+    <div class="scroller" #scroller>
+      @if (!store.started()) {
+        <app-welcome (pick)="ask($event)" />
+      } @else {
+        <div class="thread" role="log" aria-live="polite" aria-label="Conversation avec Lumen">
+          @for (entry of store.entries(); track entry.id) {
+            <app-message data-entry [attr.data-role]="entry.role" [entry]="entry"
+                         [summaryOpen]="entry.id === store.openSummaryId()" [pending]="store.pending()"
+                         (register)="store.register($event)" (act)="store.act($event)" />
+          }
+          @if (store.pending()) {
+            <div class="thinking" aria-label="Lumen prépare sa réponse">
+              <span class="thinking-sun"><app-sun-mark [size]="24" [ring]="false" [thinking]="true" /></span>
+              <span class="thinking-text">Lumen consulte ses sources…</span>
+            </div>
+          }
+        </div>
+      }
+    </div>
+
+    <footer class="dock">
+      <div class="dock-inner">
+        @if (store.registration(); as stage) {
+          <div class="registration-bar" [attr.data-stage]="stage">
+            <mat-icon>{{ stage === 'collect' ? 'edit_note' : 'mark_email_unread' }}</mat-icon>
+            <span>
+              @if (stage === 'collect') {
+                <strong>Demande d'inscription en cours</strong> · indiquez votre nom, prénom, e-mail et téléphone.
+              } @else {
+                <strong>Récapitulatif en attente</strong> · confirmez, modifiez ou annulez avec les boutons.
+              }
+            </span>
+            @if (stage === 'collect') {
+              <button mat-button type="button" class="bar-cancel" [disabled]="store.pending()"
+                      (click)="store.act('cancel')">Annuler</button>
+            }
+          </div>
+        }
+        <app-composer [pending]="store.pending()" [placeholder]="placeholder()" (send)="ask($event)" />
+        <p class="disclaimer">
+          Lumen répond à partir des documents officiels des admissions. En cas de doute, le service des admissions fait foi.
+        </p>
+      </div>
+    </footer>
+  </main>
+</div>
