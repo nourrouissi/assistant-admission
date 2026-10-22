@@ -161,9 +161,70 @@ Administration : http://127.0.0.1:8000/admin/
 | URL | Résultat attendu |
 |---|---|
 | http://127.0.0.1:8000/api/health/ | `{"status": "ok"}` |
-| http://127.0.0.1:8000/api/formations/?q=informatique | Formations en informatique (28) |
+| http://127.0.0.1:8000/api/formations/?q=informatique | Formations dont un mot commence par « informatique » (28) |
 | http://127.0.0.1:8000/api/formations/?school=Sousse | Formations d'une école (nom ou ville) |
 | http://127.0.0.1:8000/api/formations/?q=reseaux&diploma_type=BTS | Recherche combinée par type de diplôme |
+
+La liste est paginée par 20 : la réponse contient `count` (nombre total), `next` et `previous` (adresses des pages voisines, ou `null`), `results` (les cartes de la page), `unmatched_terms` (mots de `q` qui ne correspondent à aucune formation du catalogue, retirés de la recherche). `q` attend des mots-clés (le chatbot les extrait de la demande du prospect) : chaque mot doit commencer un mot des données, tous les mots doivent être présents, sans tenir compte des accents ni des majuscules ; aucune règle de langue (synonymes, mots vides) n'est écrite dans le code. Les cartes affichent la spécialité et les critères tels qu'écrits dans le fichier. Un `diploma_type` inconnu renvoie une erreur 400 avec la liste des valeurs possibles (`CAP`, `BTP`, `BTS`, `LICENCE`, `LICENCE_PRO`, `BACHELOR`, `INGENIEUR`, `TITRE_RNCP`, `SHORT_COURSE`) ; la casse est ignorée (`bts` = `BTS`).
+
+### Vérifier l'éligibilité
+
+`POST /api/formations/eligibility/` compare le profil déclaré d'un prospect aux critères des formations. C'est une action distincte de la recherche : la recherche ne renvoie jamais de statut d'éligibilité.
+
+**Corps JSON** (tous les champs sont facultatifs) :
+
+| Champ | Contenu |
+|---|---|
+| `profile.level` | Niveau d'études (un diplôme professionnel se déclare ici : `CAP` ou `BTP`) : `9EME`, `2EME_SEC`, `3EME_SEC`, `4EME_SEC`, `CAP`, `BTP`, `BAC`, `BAC_PLUS_2`, `LICENCE`, `LICENCE_PLUS_1`, `MASTER` |
+| `profile.nationality` | Texte libre : `Tunisienne`, `Tunisie`, `TN`… sont reconnus comme tunisiens. Une valeur qui n'est pas une nationalité (`123`) renvoie une erreur 400 |
+| `profile.bac_section` | Section du bac (ou du secondaire) : `MATH`, `SCIENCES_EXP`, `TECHNIQUE`, `INFORMATIQUE`, `ECONOMIE_GESTION`, `LETTRES`, `SPORT` |
+| `formation_ids` | Identifiants des formations à évaluer (1 à 100) |
+| `q`, `school`, `diploma_type` | Ou, à la place de `formation_ids`, les mêmes filtres que la recherche (100 formations évaluées au maximum) |
+
+**Les 4 statuts** (aucun ne garantit l'admission : la décision finale revient à l'équipe des admissions) :
+
+| Statut | Signification |
+|---|---|
+| `incomplet` | Il manque une information pour vérifier les critères (voir `missing`) |
+| `non_compatible` | D'après les informations indiquées, au moins un critère n'est pas rempli (voir `reasons`, qui cite le texte officiel de l'école) |
+| `a_confirmer` | Le code ne peut ni confirmer ni refuser, l'équipe tranche : voie CAP/BTP « dans le même secteur », diplôme professionnel (CAP, BTP) face à une année du secondaire, ou formation dont les données sont signalées comme à vérifier (`criteria_under_review`, aucun refus ferme n'est alors prononcé) |
+| `compatible` | Les critères affichés sont remplis |
+
+**Réponse :** `count`, `missing_information` (informations à demander au prospect, regroupées et sans doublon), `unknown_formation_ids` (identifiants demandés introuvables ou inactifs), pour une recherche par `q`/`school`/`diploma_type` seulement : `unmatched_terms` (comme pour la recherche), et `results` (les cartes, chacune avec un bloc `eligibility` : `status`, `missing`, `reasons`, `message`). Les cartes sont triées par statut : `compatible`, `a_confirmer`, `incomplet`, puis `non_compatible` ; à statut égal, l'ordre de la recherche est conservé.
+
+Exemple :
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/formations/eligibility/ \
+  -H "Content-Type: application/json" \
+  -d '{"profile": {"level": "BAC_PLUS_2"}, "q": "batiment"}'
+```
+
+Extrait de la réponse :
+
+```json
+{
+  "count": 1,
+  "missing_information": ["nationalité"],
+  "unknown_formation_ids": [],
+  "unmatched_terms": [],
+  "results": [
+    {
+      "diploma": "Diplome de LICENCE",
+      "specialty": "Licence en Batiment",
+      "school": "IMSET SOUSSE",
+      "criteria": {"level": "Bac+ 2/ BTS", "nationality": "Tunisienne", "bac": "All"},
+      "criteria_under_review": false,
+      "eligibility": {
+        "status": "incomplet",
+        "missing": ["nationalité"],
+        "reasons": [],
+        "message": "Pour vérifier les critères de cette formation, j'ai besoin de : nationalité."
+      }
+    }
+  ]
+}
+```
 
 ## 4. Frontend Angular
 

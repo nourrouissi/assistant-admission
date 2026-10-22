@@ -30,6 +30,11 @@ class Command(BaseCommand):
             f"{report.total} formations importées ({report.created} créées, "
             f"{report.updated} mises à jour, {report.skipped} lignes vides ignorées)."
         ))
+        # Formations absentes du fichier : désactivées (conservées pour l'historique)
+        plural = "s" if report.deactivated > 1 else ""
+        self.stdout.write(
+            f"{report.deactivated} formation{plural} désactivée{plural} (absente{plural} du fichier)."
+        )
         if report.warnings:
             self.stdout.write(self.style.WARNING(
                 f"\n{len(report.warnings)} anomalies à faire vérifier par l'équipe :"

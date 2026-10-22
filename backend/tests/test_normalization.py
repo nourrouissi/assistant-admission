@@ -78,17 +78,19 @@ def test_nationality():
     assert parse_nationality("Tunisienne") == "TN"
 
 
-def test_specialty_prefix_and_spacing_are_cleaned():
+def test_specialty_comparable_form_for_duplicates():
+    # Sert seulement à repérer les doublons : l'affichage garde le texte du fichier.
     assert clean_specialty("BTS-Comptabilité et Finances") == "Comptabilité et Finances"
     assert clean_specialty("BTS_Bioanalyses et Controles") == "Bioanalyses et Controles"
     assert clean_specialty("Réseaux et Sécurité Informatiques(cours du soir)") == "Réseaux et Sécurité Informatiques (cours du soir)"
 
 
 def test_inconsistent_rows_are_reported():
-    # BTS demandant seulement la 2ème année : incohérence repérée à IMSET Sousse
+    # Aucune supposition sur le niveau « normal » d'un diplôme : un BTS demandant
+    # la 2ème année n'est pas signalé, le critère de l'école fait foi.
     low = parse_level_requirement("2ème avec succés ou CAP dans le même secteur")
-    assert consistency_warnings(DiplomaType.BTS, low, BacRule.ANY)
-    # « sans bac » alors que le bac est requis
+    assert consistency_warnings(DiplomaType.BTS, low, BacRule.ANY) == []
+    # « sans bac » alors que le bac est requis : contradiction dans la ligne
     bac = parse_level_requirement("bac ou BTP dans le même secteur")
     assert consistency_warnings(DiplomaType.BTP, bac, BacRule.NOT_REQUIRED)
     # Ligne cohérente : aucune alerte

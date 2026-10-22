@@ -1,48 +1,104 @@
 """
-Sérialiseurs : transforment une Formation en JSON pour l'API.
+Sérialiseurs : transforment les données en JSON (et valident le JSON reçu).
 
-Le format correspond aux « cartes » demandées par le sujet : diplôme,
-spécialité, école et critères d'éligibilité.
+- FormationSerializer : une formation au format « carte » demandé par le sujet
+  (diplôme, spécialité, école, critères d'éligibilité).
+- SearchParamsSerializer : valide les filtres de la recherche (GET).
+- ProfileSerializer / EligibilityRequestSerializer : valident le profil envoyé
+  pour une vérification d'éligibilité.
 """
 
 from rest_framework import serializers
 
 from .models import Formation
-from .normalization import BacRule, BacSection
+from .normalization import BacSection, Level, normalize_nationality, parse_diploma_type_code
+
+# Nombre maximal de formations évaluées en une demande (protection de l'API)
+MAX_EVALUATED = 100
 
 
 class FormationSerializer(serializers.ModelSerializer):
     diploma = serializers.SerializerMethodField()
     criteria = serializers.SerializerMethodField()
+    criteria_under_review = serializers.SerializerMethodField()
 
     class Meta:
         model = Formation
-        fields = ["id", "diploma", "diploma_type", "specialty", "school", "city", "criteria"]
+        fields = ["id", "diploma", "diploma_type", "specialty", "school", "city", "criteria", "criteria_under_review"]
 
     def get_diploma(self, obj: Formation) -> str:
-        """Libellé lisible du diplôme (« Brevet de Technicien Supérieur (BTS) »)."""
-        return obj.get_diploma_type_display() or obj.diploma_label
+        """
+        Libellé officiel du diplôme, tel qu'il figure dans le fichier (« INGENIEUR CNAM »),
+        sans rien ajouter ni retirer. Le type normalisé reste disponible dans `diploma_type`.
+        """
+        return obj.diploma_label
 
     def get_criteria(self, obj: Formation) -> dict:
         """
-        Critères d'éligibilité à afficher sur la carte.
-        Le niveau reprend le texte officiel de l'école (valeur d'origine) ;
-        la nationalité et le bac sont traduits en français lisible.
+        Critères d'éligibilité à afficher sur la carte : le texte du fichier, tel quel
+        (seuls les espaces en trop sont retirés à l'import). Aucune reformulation.
         """
-        if obj.bac_rule == BacRule.SECTIONS:
-            bac = " ou ".join(BacSection.LABELS.get(code, code) for code in obj.bac_sections)
-        elif obj.bac_rule == BacRule.NOT_REQUIRED:
-            bac = "Bac non requis"
-        else:
-            bac = "Toutes sections"
-
-        if obj.nationality_required == "TN":
-            nationality = "Tunisienne"
-        else:
-            nationality = obj.nationality_required or "Toutes"
-
         return {
-            "level": obj.level_raw if obj.min_level else "Aucune exigence",
-            "nationality": nationality,
-            "bac": bac,
+            "level": obj.level_raw,
+            "nationality": obj.nationality_raw,
+            "bac": obj.bac_raw,
         }
+
+    def get_criteria_under_review(self, obj: Formation) -> bool:
+        """Vrai si l'import a signalé une anomalie : critères à confirmer par l'équipe."""
+        return bool(obj.import_warnings)
+
+
+def clean_diploma_type(value: str) -> str:
+    """« bts » ou « BTS » -> "BTS" ; code inconnu -> erreur 400 avec les valeurs possibles."""
+    if not value:
+        return ""
+    try:
+        return parse_diploma_type_code(value)
+    except ValueError as exc:
+        raise serializers.ValidationError(str(exc)) from exc
+
+
+class SearchParamsSerializer(serializers.Serializer):
+    """Filtres de la recherche (paramètres de l'URL). Tous facultatifs."""
+
+    q = serializers.CharField(required=False, allow_blank=True, default="")
+    school = serializers.CharField(required=False, allow_blank=True, default="")
+    diploma_type = serializers.CharField(required=False, allow_blank=True, default="")
+
+    def validate_diploma_type(self, value: str) -> str:
+        return clean_diploma_type(value)
+
+
+class ProfileSerializer(serializers.Serializer):
+    """
+    Profil déclaré par le prospect. Tous les champs sont facultatifs.
+    Les choix possibles viennent de normalization.py : une valeur inconnue
+    est refusée avec un message clair (erreur 400), jamais devinée.
+    """
+
+    level = serializers.ChoiceField(choices=Level.CHOICES, required=False, allow_null=True)
+    nationality = serializers.CharField(required=False, allow_null=True, allow_blank=True, max_length=40)
+    bac_section = serializers.ChoiceField(choices=list(BacSection.LABELS.items()), required=False, allow_null=True)
+
+    def validate_nationality(self, value: str | None) -> str | None:
+        """« Tunisie » -> "TN" ; « 123 » -> erreur 400 « Nationalité non reconnue. »."""
+        if not value:
+            return None
+        try:
+            return normalize_nationality(value)
+        except ValueError as exc:
+            raise serializers.ValidationError(str(exc)) from exc
+
+
+class EligibilityRequestSerializer(SearchParamsSerializer):
+    """
+    Demande de vérification : un profil + les formations à évaluer, désignées
+    soit par leurs identifiants (`formation_ids`, 1 à 100), soit par les mêmes
+    filtres que la recherche (`q`, `school`, `diploma_type`).
+    """
+
+    profile = ProfileSerializer(required=False, default=dict)
+    formation_ids = serializers.ListField(
+        child=serializers.IntegerField(), required=False, min_length=1, max_length=MAX_EVALUATED,
+    )

@@ -34,16 +34,20 @@ def test_import_is_idempotent(imported):
     assert Formation.objects.count() == 89
 
 
-def test_import_reports_the_6_known_anomalies(imported):
-    assert len(imported.warnings) == 6
+def test_import_reports_the_3_known_anomalies(imported):
+    # 1 contradiction (« san bac » avec un niveau « bac ») + 1 message « Doublon
+    # probable » sur chacune des 2 lignes « Décoration et design d'intérieur » (BTS, Sousse).
+    assert len(imported.warnings) == 3
 
 
 def test_search_is_accent_and_case_insensitive(imported):
     assert count(q="Sécurité") == count(q="securite") > 0
 
 
-def test_abbreviation_is_understood(imported):
-    assert count(q="info") == count(q="informatique") == 28
+def test_keyword_matches_the_start_of_a_word(imported):
+    # « info » trouve « informatique » et « infographie » ; aucun synonyme ajouté
+    assert count(q="informatique") == 28
+    assert count(q="info") == 29
 
 
 def test_school_filter_accepts_city_name(imported):
@@ -56,16 +60,17 @@ def test_same_specialty_exists_in_several_schools(imported):
     assert len({item["school"] for item in data["results"]}) == 4
 
 
-def test_unknown_words_fall_back_to_partial_matches(imported):
-    # « dès que possible » : une recherche à plusieurs mots ne renvoie pas un résultat vide
-    assert count(q="informatique cuisine") > 0
+def test_unknown_word_does_not_block_known_words(imported):
+    # « cuisine » n'existe pas dans le catalogue : il est retiré, « informatique » reste
+    assert count(q="informatique cuisine") == count(q="informatique")
 
 
 def test_card_contains_official_criteria(imported):
     card = APIClient().get("/api/formations/", {"q": "batiment"}).json()["results"][0]
-    assert card["diploma"] == "Licence"
+    # La carte affiche le libellé officiel du fichier, sans rien ajouter ni retirer.
+    assert card["diploma"] == "Diplome de LICENCE"
     assert card["school"] == "IMSET SOUSSE"
-    assert card["criteria"] == {"level": "Bac+ 2/ BTS", "nationality": "Tunisienne", "bac": "Toutes sections"}
+    assert card["criteria"] == {"level": "Bac+ 2/ BTS", "nationality": "Tunisienne", "bac": "All"}
 
 
 def test_api_is_read_only(imported):

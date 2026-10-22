@@ -39,6 +39,15 @@ def fold(value: str | None) -> str:
     return text.lower()
 
 
+# Valeurs du fichier qui signifient « aucune restriction » (texte plié)
+_ALL_VALUES = {"", "all", "tous", "toutes"}
+
+
+def is_all(value: str | None) -> bool:
+    """« All », « Toutes »… : la colonne n'impose aucune restriction."""
+    return fold(value) in _ALL_VALUES
+
+
 # ---------------------------------------------------------------------------
 # Types de diplômes : 11 libellés bruts -> 9 types normalisés
 # ---------------------------------------------------------------------------
@@ -92,6 +101,19 @@ def normalize_diploma_type(label: str) -> str | None:
     return None
 
 
+def parse_diploma_type_code(value: str) -> str:
+    """
+    Code de type de diplôme envoyé à l'API (« bts », « BTS ») -> code normalisé.
+    Un code inconnu est refusé avec la liste des valeurs possibles, jamais deviné.
+    """
+    code = clean_spaces(value).upper()
+    if code not in DiplomaType.LABELS:
+        raise ValueError(
+            f"Type de diplôme inconnu : « {value} ». Valeurs possibles : {', '.join(DiplomaType.LABELS)}."
+        )
+    return code
+
+
 # ---------------------------------------------------------------------------
 # Spécialités et écoles
 # ---------------------------------------------------------------------------
@@ -100,7 +122,10 @@ _SPECIALTY_PREFIX = re.compile(r"^(bts|btp)\s*[-_]\s*", re.IGNORECASE)
 
 
 def clean_specialty(raw: str) -> str:
-    """Nettoie une spécialité pour l'affichage : « BTS-Comptabilité » -> « Comptabilité »."""
+    """
+    Forme comparable d'une spécialité, utilisée seulement pour repérer les doublons
+    (« BTS-Comptabilité » ~ « Comptabilité ») : l'affichage garde le texte du fichier.
+    """
     text = _SPECIALTY_PREFIX.sub("", clean_spaces(raw))
     text = re.sub(r"(\S)\(", r"\1 (", text)  # « Informatiques(cours du soir) » -> espace avant « ( »
     return text[:1].upper() + text[1:] if text else text
@@ -110,6 +135,24 @@ def school_city(school: str) -> str:
     """« IMSET SOUSSE » -> « Sousse »."""
     parts = clean_spaces(school).split(" ", 1)
     return parts[1].title() if len(parts) == 2 else ""
+
+
+def duplicate_key(diploma_label: str, specialty_raw: str, school: str) -> tuple:
+    """
+    Clé de comparaison de deux lignes de l'Excel : même type de diplôme, même
+    spécialité nettoyée (sans préfixe « BTS- », sans accents ni casse), même école.
+
+    Sujet : l'assistant « ne doit pas confirmer l'éligibilité si les critères
+    nécessaires ne sont pas […] vérifiés ». Deux lignes de même clé sont un
+    doublon probable, souvent avec des critères différents : on les signale.
+    Ex. « Décoration et design d'intérieur » et « BTS-Décoration et design
+    d'intérieur » à IMSET SOUSSE.
+    """
+    return (
+        normalize_diploma_type(diploma_label),
+        fold(clean_specialty(specialty_raw)),
+        clean_spaces(school).upper(),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -144,7 +187,7 @@ class Level:
         NEUVIEME: "9ème année de base accomplie",
         DEUXIEME_SEC: "2ème année secondaire réussie",
         TROISIEME_SEC: "3ème année secondaire",
-        QUATRIEME_SEC: "4ème année secondaire (sans bac)",
+        QUATRIEME_SEC: "4ème année secondaire",
         CAP: "CAP",
         BTP: "BTP",
         BAC: "Baccalauréat",
@@ -182,8 +225,12 @@ def parse_level_requirement(raw: str) -> LevelRequirement:
     text = fold(raw)
     compact = text.replace(" ", "")
 
-    if text in {"", "all", "tous", "toutes"}:
+    if text in _ALL_VALUES:
         return LevelRequirement(min_level=None)
+
+    # « sans bac » précise que le bac n'est PAS exigé : ce « bac » ne doit pas
+    # être lu comme un niveau requis (« 4ème sans bac » = 4ème année).
+    without_sans_bac = re.sub(r"\bsans? bac\b", " ", text)
 
     req = LevelRequirement()
     if "licence+1" in compact:
@@ -192,7 +239,7 @@ def parse_level_requirement(raw: str) -> LevelRequirement:
         req.min_level = Level.LICENCE
     elif "bac+2" in compact:
         req.min_level = Level.BAC_PLUS_2
-    elif re.search(r"\bbac\b", text):
+    elif re.search(r"\bbac\b", without_sans_bac):
         req.min_level = Level.BAC
     elif "4eme" in text:
         req.min_level = Level.QUATRIEME_SEC
@@ -247,11 +294,10 @@ class BacSection:
         SPORT: "Sport",
     }
 
-    # Mots-clés (texte plié) -> section. Servira aussi à comprendre le prospect :
-    # « j'ai un bac info » -> INFORMATIQUE.
+    # Mots-clés (texte plié) -> section, pour lire la colonne « Nature du bac » du fichier.
     KEYWORDS = {
         "math": MATH, "experimental": SCIENCES_EXP, "technique": TECHNIQUE,
-        "informatique": INFORMATIQUE, "info": INFORMATIQUE,
+        "informatique": INFORMATIQUE,
         "economie": ECONOMIE_GESTION, "gestion": ECONOMIE_GESTION,
         "lettre": LETTRES, "sport": SPORT,
     }
@@ -271,9 +317,11 @@ def parse_bac_rule(raw: str) -> tuple[str, list[str]]:
     """
     « All » -> (ANY, []) ; « san bac » (faute de frappe) -> (NOT_REQUIRED, []) ;
     « Sciences expérimentales ou Mathèmatique » -> (SECTIONS, [MATH, SCIENCES_EXP]).
+    Une valeur non comprise renvoie aussi (ANY, []) : bac_rule_understood() permet
+    de la distinguer d'un vrai « All » pour la signaler comme anomalie.
     """
     text = fold(raw)
-    if text in {"", "all", "tous", "toutes"}:
+    if text in _ALL_VALUES:
         return BacRule.ANY, []
     if re.fullmatch(r"sans? bac", text):
         return BacRule.NOT_REQUIRED, []
@@ -283,17 +331,73 @@ def parse_bac_rule(raw: str) -> tuple[str, list[str]]:
     return BacRule.ANY, []
 
 
+def bac_rule_understood(raw: str) -> bool:
+    """Faux si la nature du bac n'a pas été comprise (ex. « Bac français »)."""
+    rule, _ = parse_bac_rule(raw)
+    return rule != BacRule.ANY or is_all(raw)
+
+
 # ---------------------------------------------------------------------------
 # Nationalité
 # ---------------------------------------------------------------------------
 
+# Formes reconnues de la nationalité tunisienne (texte plié) : nationalité,
+# pays, anglais, codes ISO à 2 et 3 lettres.
+_TUNISIAN = {
+    "tunisienne", "tunisien", "tunisiennes", "tunisiens",
+    "tunisie", "tunisia", "tunisian", "tunisians", "tn", "tun",
+}
+
+# Une nationalité déclarée : des lettres (espaces, tirets, apostrophes admis), 2 à 40 caractères.
+_NATIONALITY_SHAPE = re.compile(r"[a-z][a-z' -]{1,39}")
+
+# Séparateurs d'une double nationalité déclarée : « et », virgule, barre oblique.
+_DUAL_NATIONALITY_SEPARATOR = re.compile(r"\s*(?:,|/|\bet\b)\s*")
+
+
 def parse_nationality(raw: str) -> str | None:
-    """« All » -> None (toutes nationalités) ; « Tunisienne » -> "TN"."""
-    text = fold(raw)
-    if text in {"", "all", "toutes", "tous"}:
-        return None
-    if text.startswith("tunisien"):
+    """
+    Colonne « Nationalité éligible » de l'Excel -> code de la nationalité exigée.
+    « All » -> None (toutes nationalités) ; « Tunisienne » -> "TN".
+
+    Toute autre valeur (« Tunisienne ou Algérienne », nationalité inconnue) n'est
+    pas comprise : on renvoie None au lieu de la réduire à "TN", et l'import la
+    signale comme anomalie (voir nationality_understood). Le moteur d'éligibilité
+    laisse alors ce critère à l'équipe des admissions (« sous réserve »).
+    """
+    return "TN" if fold(raw) in _TUNISIAN else None
+
+
+def nationality_understood(raw: str) -> bool:
+    """Vrai si la colonne « Nationalité éligible » est « All » ou la nationalité tunisienne."""
+    return is_all(raw) or fold(raw) in _TUNISIAN
+
+
+def normalize_nationality(value: str) -> str:
+    """
+    Nationalité déclarée par le prospect -> code comparable au critère de la formation.
+
+    « Tunisie », « tunisian », « TUN »… -> "TN". Une autre nationalité est gardée
+    pliée en majuscules (« Française » -> "FRANCAISE") : elle ne correspond pas à
+    "TN", ce qui est voulu. Une valeur qui ne ressemble pas à une nationalité
+    (« 123 », « ?? ») lève ValueError : elle est refusée, jamais transformée en
+    refus d'éligibilité.
+    """
+    text = fold(value)
+    if text in _TUNISIAN:
         return "TN"
+
+    # Sujet : critère « la nationalité ». Double nationalité (« Tunisienne et
+    # française », « tunisienne, française », « tunisienne / française ») : le
+    # prospect a la nationalité tunisienne. Chaque partie doit ressembler à une
+    # nationalité, sinon la valeur est refusée.
+    parts = [part.strip() for part in _DUAL_NATIONALITY_SEPARATOR.split(text)]
+    if len(parts) > 1 and all(_NATIONALITY_SHAPE.fullmatch(part) for part in parts):
+        if any(part in _TUNISIAN for part in parts):
+            return "TN"
+
+    if not _NATIONALITY_SHAPE.fullmatch(text):
+        raise ValueError("Nationalité non reconnue.")
     return text.upper()
 
 
@@ -301,31 +405,29 @@ def parse_nationality(raw: str) -> str | None:
 # Contrôle de cohérence : signaler sans corriger
 # ---------------------------------------------------------------------------
 
-_EXPECTED_MIN_RANK = {
-    DiplomaType.BTS: Level.RANK[Level.BAC],
-    DiplomaType.LICENCE: Level.RANK[Level.BAC_PLUS_2],
-    DiplomaType.LICENCE_PRO: Level.RANK[Level.BAC_PLUS_2],
-    DiplomaType.INGENIEUR: Level.RANK[Level.LICENCE],
-}
-
-
-def consistency_warnings(diploma_type: str | None, level: LevelRequirement, bac_rule: str) -> list[str]:
+def consistency_warnings(
+    diploma_type: str | None,
+    level: LevelRequirement,
+    bac_rule: str,
+    *,
+    bac_parsed: bool = True,
+    nationality_parsed: bool = True,
+) -> list[str]:
     """
-    Détecte les lignes probablement mal saisies, sans les modifier : on ne change
-    pas les données métier de l'école, on les signale pour que l'équipe tranche.
+    Détecte les lignes que le code ne peut pas lire de façon sûre, sans les modifier :
+    valeur non comprise, ou contradiction interne à la ligne. Aucune supposition sur
+    le niveau « normal » d'un diplôme : les critères de l'école font foi.
+    Une formation avec anomalie n'est jamais confirmée « compatible » (voir eligibility.py).
     """
     warnings: list[str] = []
     if diploma_type is None:
         warnings.append("Type de diplôme non reconnu.")
     if not level.parsed:
         warnings.append("Niveau éligible non compris.")
-
-    expected = _EXPECTED_MIN_RANK.get(diploma_type or "")
-    if expected and level.min_level and Level.RANK[level.min_level] < expected:
-        warnings.append(
-            f"Niveau requis ({Level.LABELS[level.min_level]}) inhabituellement bas "
-            "pour ce type de diplôme : saisie à vérifier."
-        )
+    if not nationality_parsed:
+        warnings.append("Nationalité éligible non comprise.")
+    if not bac_parsed:
+        warnings.append("Nature du bac non comprise.")
     if bac_rule == BacRule.NOT_REQUIRED and level.min_level and Level.RANK[level.min_level] >= Level.RANK[Level.BAC]:
         warnings.append("Contradiction : « sans bac » alors que le niveau requis est au moins le bac.")
     return warnings

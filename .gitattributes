@@ -4,6 +4,7 @@
 
 # Fichiers binaires : jamais modifiés par Git
 *.xlsx binary
+*.docx binary
 *.png binary
 *.jpg binary
 *.pdf binary
