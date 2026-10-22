@@ -1,64 +1,51 @@
+<!-- Photo de la cérémonie, en filigrane sur les côtés : elle ne passe jamais sous la conversation -->
+<div class="backdrop" [class.hidden]="!store.started()" aria-hidden="true"></div>
+
 <div class="shell">
-  <!-- Colonne du parcours (ordinateur) -->
-  <aside class="rail">
+  <mat-toolbar class="topbar">
     <div class="brand">
-      <app-sun-mark [size]="46" class="brand-sun" />
-      <div>
-        <p class="brand-name">Lumen</p>
-        <p class="brand-tagline">Votre guide vers l'admission</p>
-      </div>
+      <span class="brand-cap"><app-cap-mark [size]="26" /></span>
+      <span class="brand-text">
+        <span class="brand-name">Cap <em>Diplôme</em></span>
+        <span class="brand-tagline">Votre cap vers le diplôme</span>
+      </span>
     </div>
-    <div class="rule" aria-hidden="true"></div>
 
-    <p class="rail-label">Votre parcours</p>
-    <app-journey [steps]="store.journey()" />
+    <app-ceremony-path class="path-wide" [steps]="store.journey()" />
 
-    <div class="rail-foot">
-      <p class="promise">
-        <mat-icon>gavel</mat-icon>
-        <span>Lumen vous informe et vous accompagne. La décision d'admission appartient toujours à l'équipe des admissions.</span>
-      </p>
+    <div class="tools">
       @if (store.started()) {
         <button mat-stroked-button class="restart" type="button" (click)="restart()">
           <mat-icon>add_comment</mat-icon>
-          Nouvelle conversation
+          <span class="restart-label">Nouvelle conversation</span>
         </button>
       }
     </div>
+  </mat-toolbar>
+  <div class="ribbon" aria-hidden="true"></div>
+  @if (store.pending()) {
+    <mat-progress-bar class="loading" mode="indeterminate" aria-label="Réponse en cours" />
+  }
 
-    <app-sun-mark class="rail-sun" [size]="440" [spin]="true" aria-hidden="true" />
-  </aside>
+  <div class="path-strip">
+    <app-ceremony-path [steps]="store.journey()" [compact]="true" />
+  </div>
 
   <main class="stage">
-    <!-- Barre du haut (tablette et mobile) -->
-    <header class="topbar">
-      <div class="topbar-brand">
-        <span class="topbar-sun"><app-sun-mark [size]="22" [ring]="false" /></span>
-        <span class="brand-name">Lumen</span>
-      </div>
-      <app-journey [steps]="store.journey()" [compact]="true" />
-      @if (store.started()) {
-        <button mat-icon-button type="button" aria-label="Nouvelle conversation" matTooltip="Nouvelle conversation"
-                (click)="restart()">
-          <mat-icon>add_comment</mat-icon>
-        </button>
-      }
-    </header>
-
     <div class="scroller" #scroller>
       @if (!store.started()) {
         <app-welcome (pick)="ask($event)" />
       } @else {
-        <div class="thread" role="log" aria-live="polite" aria-label="Conversation avec Lumen">
+        <div class="thread" role="log" aria-live="polite" aria-label="Conversation avec Cap Diplôme">
           @for (entry of store.entries(); track entry.id) {
             <app-message data-entry [attr.data-role]="entry.role" [entry]="entry"
                          [summaryOpen]="entry.id === store.openSummaryId()" [pending]="store.pending()"
                          (register)="store.register($event)" (act)="store.act($event)" />
           }
           @if (store.pending()) {
-            <div class="thinking" aria-label="Lumen prépare sa réponse">
-              <span class="thinking-sun"><app-sun-mark [size]="24" [ring]="false" [thinking]="true" /></span>
-              <span class="thinking-text">Lumen consulte ses sources…</span>
+            <div class="thinking">
+              <span class="thinking-cap"><app-cap-mark [size]="22" [swing]="true" /></span>
+              <span class="thinking-text">Cap Diplôme consulte les documents des admissions…</span>
             </div>
           }
         </div>
@@ -69,12 +56,12 @@
       <div class="dock-inner">
         @if (store.registration(); as stage) {
           <div class="registration-bar" [attr.data-stage]="stage">
-            <mat-icon>{{ stage === 'collect' ? 'edit_note' : 'mark_email_unread' }}</mat-icon>
+            <mat-icon>{{ stage === 'collect' ? 'edit_note' : 'assignment_turned_in' }}</mat-icon>
             <span>
               @if (stage === 'collect') {
                 <strong>Demande d'inscription en cours</strong> · indiquez votre nom, prénom, e-mail et téléphone.
               } @else {
-                <strong>Récapitulatif en attente</strong> · confirmez, modifiez ou annulez avec les boutons.
+                <strong>Dossier en attente</strong> · confirmez, modifiez ou annulez avec les boutons du dossier.
               }
             </span>
             @if (stage === 'collect') {
@@ -85,7 +72,8 @@
         }
         <app-composer [pending]="store.pending()" [placeholder]="placeholder()" (send)="ask($event)" />
         <p class="disclaimer">
-          Lumen répond à partir des documents officiels des admissions. En cas de doute, le service des admissions fait foi.
+          <mat-icon>gavel</mat-icon>
+          Réponses issues des documents officiels des admissions. La décision d'admission appartient toujours à l'équipe des admissions.
         </p>
       </div>
     </footer>

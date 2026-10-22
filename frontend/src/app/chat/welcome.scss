@@ -1,222 +1,297 @@
-:host { display: block; }
+@use '@angular/material' as mat;
 
-.welcome {
-  max-width: 960px;
-  margin: 0 auto;
-  padding: calc(4vh + 28px) 0 24px;
-  text-align: center;
-}
+// L'accueil occupe toute la largeur (il annule la marge intérieure de la zone de défilement)
+:host { display: block; margin: 0 -28px; padding-bottom: 12px; }
 
-// --- Emblème ------------------------------------------------------------------------------------------
-.emblem {
+// ======================================================================================================
+// La scène
+// ======================================================================================================
+.hero {
   position: relative;
-  width: 132px;
-  height: 132px;
-  margin: 0 auto 22px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  color: var(--gold);
-  background:
-    radial-gradient(circle at 30% 25%, #8a2a3e, var(--burgundy) 45%, var(--burgundy-night));
-  box-shadow: 0 24px 50px -20px rgba(74, 19, 32, 0.7), inset 0 0 0 1px rgba(232, 211, 155, 0.3);
-  animation: rise 0.8s var(--ease-out) both;
+  min-height: 380px;
+  padding: 64px 28px 120px;
+  overflow: hidden;
+  color: #ffffff;
+  text-align: center;
+  isolation: isolate;
+  background: var(--gown-deep);
 }
 
-.halo {
+.photo {
   position: absolute;
-  inset: -16px;
-  border-radius: 50%;
-  border: 1px solid rgba(201, 162, 74, 0.35);
-  animation: halo 4s ease-in-out infinite;
-
-  &::after {
-    content: '';
-    position: absolute;
-    inset: -14px;
-    border-radius: 50%;
-    border: 1px dashed rgba(201, 162, 74, 0.25);
-  }
+  inset: -10px;
+  z-index: -3;
+  background: url('/images/ceremonie.png') center 35% / cover no-repeat;
+  filter: blur(2px) saturate(1.15);
+  transform: scale(1.04);
+  animation: drift 24s ease-in-out infinite alternate;
 }
 
-@keyframes halo { 50% { transform: scale(1.05); opacity: 0.6; } }
+@keyframes drift { to { transform: scale(1.12) translateY(-10px); } }
 
-.eyebrow {
-  margin: 0 0 10px;
-  font-size: 0.74rem;
+// Voile : noir des toges en haut, bordeaux en bas, rouge de la scène au centre
+.shade {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background:
+    radial-gradient(70% 60% at 50% 100%, rgba(226, 35, 26, 0.35), transparent 70%),
+    linear-gradient(180deg, rgba(20, 17, 18, 0.88) 0%, rgba(35, 31, 32, 0.72) 45%, rgba(74, 19, 32, 0.9) 100%);
+}
+
+// Projecteurs qui balayent la scène
+.beams { position: absolute; inset: 0; z-index: -1; pointer-events: none; }
+
+.beam {
+  position: absolute;
+  top: -40px;
+  width: 180px;
+  height: 140%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0) 75%);
+  clip-path: polygon(46% 0, 54% 0, 100% 100%, 0 100%);
+  filter: blur(6px);
+  mix-blend-mode: screen;
+  transform-origin: 50% 0;
+
+  &.left { left: 12%; animation: sweep-left 9s ease-in-out infinite alternate; }
+  &.right { right: 12%; animation: sweep-right 10s ease-in-out infinite alternate; }
+  &.late { animation-delay: -4s; opacity: 0.6; }
+}
+
+@keyframes sweep-left { from { transform: rotate(-28deg); } to { transform: rotate(12deg); } }
+@keyframes sweep-right { from { transform: rotate(28deg); } to { transform: rotate(-12deg); } }
+
+// Toques qui s'envolent puis retombent doucement
+.caps { position: absolute; inset: 0; z-index: -1; pointer-events: none; }
+
+.cap {
+  position: absolute;
+  bottom: -60px;
+  color: #ffffff;
+  --tassel: var(--red);
+  opacity: 0;
+  animation-name: toss;
+  animation-timing-function: cubic-bezier(0.25, 0.6, 0.35, 1);
+  animation-iteration-count: infinite;
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.45));
+}
+
+@keyframes toss {
+  0% { opacity: 0; transform: translateY(0) rotate(0); }
+  10% { opacity: 0.9; }
+  45% { opacity: 0.9; transform: translateY(-300px) rotate(var(--turn)); }
+  80% { opacity: 0.5; transform: translateY(-120px) rotate(calc(var(--turn) * -1)); }
+  100% { opacity: 0; transform: translateY(40px) rotate(0); }
+}
+
+.hero-content { position: relative; max-width: 760px; margin: 0 auto; }
+
+.overline {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 14px;
+  font-size: 0.72rem;
   font-weight: 700;
-  letter-spacing: 0.22em;
+  letter-spacing: 0.3em;
   text-transform: uppercase;
-  color: var(--gold-deep);
-  animation: rise 0.8s var(--ease-out) 0.05s both;
+  color: rgba(255, 255, 255, 0.85);
+  animation: rise 0.8s var(--ease-out) both;
+
+  span { width: 36px; height: 2px; background: var(--red); }
 }
 
 h1 {
-  font-size: clamp(2rem, 4.4vw, 3.1rem);
-  line-height: 1.1;
-  color: var(--burgundy-deep);
-  animation: rise 0.8s var(--ease-out) 0.1s both;
+  font-size: clamp(2.3rem, 5vw, 3.9rem);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+  text-shadow: 0 6px 30px rgba(0, 0, 0, 0.45);
+  animation: rise 0.8s var(--ease-out) 0.08s both;
 
   em {
+    position: relative;
     font-style: italic;
-    font-weight: 500;
-    background: linear-gradient(120deg, var(--burgundy) 20%, var(--gold-deep));
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
+    color: #ffffff;
+    white-space: nowrap;
+
+    // Trait rouge sous « diplôme », comme le liseré des logos
+    &::after {
+      content: '';
+      position: absolute;
+      left: 2%;
+      right: 2%;
+      bottom: 0.02em;
+      height: 0.12em;
+      border-radius: 4px;
+      background: var(--red);
+      transform-origin: left;
+      animation: underline 0.9s var(--ease-out) 0.7s both;
+      z-index: -1;
+    }
   }
 }
 
+@keyframes underline { from { transform: scaleX(0); } }
+
 .lead {
   max-width: 600px;
-  margin: 16px auto 0;
-  font-size: 1.02rem;
-  line-height: 1.65;
-  color: var(--ink-soft);
-  animation: rise 0.8s var(--ease-out) 0.15s both;
+  margin: 18px auto 0;
+  font-size: 1rem;
+  line-height: 1.7;
+  color: rgba(255, 255, 255, 0.82);
+  animation: rise 0.8s var(--ease-out) 0.16s both;
 }
 
-// --- Les trois portes ---------------------------------------------------------------------------------
+// ======================================================================================================
+// Les trois portes (cartes Material), qui chevauchent le bas de la scène
+// ======================================================================================================
 .doors {
+  position: relative;
+  z-index: 1;
+  max-width: 1040px;
+  margin: -84px auto 0;
+  padding: 0 28px;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 18px;
-  margin-top: 40px;
-  text-align: left;
 }
 
 .door {
   position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 22px 22px 20px;
-  border: 1px solid var(--line);
-  border-radius: 22px;
-  background: var(--paper);
-  color: inherit;
-  font: inherit;
-  text-align: left;
   cursor: pointer;
   overflow: hidden;
-  box-shadow: var(--shadow-soft);
+  background: var(--white);
+  box-shadow: var(--shadow-lift);
   animation: rise 0.7s var(--ease-out) both;
-  transition: transform 0.35s var(--ease-out), box-shadow 0.35s var(--ease-out), border-color 0.35s;
+  transition: transform 0.35s var(--ease-out), box-shadow 0.35s var(--ease-out);
 
-  // Filet doré qui se déploie au survol
+  // Bandeau rouge qui monte au survol
   &::before {
     content: '';
     position: absolute;
-    left: 0;
-    top: 0;
-    height: 3px;
-    width: 0;
-    background: linear-gradient(90deg, var(--gold), var(--gold-light));
-    transition: width 0.5s var(--ease-out);
+    inset: auto 0 0 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--burgundy), var(--red));
+    transition: height 0.4s var(--ease-out);
   }
 
   &:hover, &:focus-visible {
-    transform: translateY(-6px);
-    box-shadow: var(--shadow-lift);
-    border-color: rgba(201, 162, 74, 0.5);
-    &::before { width: 100%; }
-    .arrow { opacity: 1; transform: translateX(0); }
-    .icon { background: var(--burgundy); color: var(--gold-light); }
+    transform: translateY(-8px);
+    box-shadow: 0 30px 60px -24px rgba(20, 17, 18, 0.55);
+    &::before { height: 7px; }
+    .door-icon { background: var(--red); color: #ffffff; transform: rotate(-8deg); }
+    .door-arrow { background: var(--gown); color: #ffffff; transform: translateX(4px); }
   }
+
+  mat-card-header { padding: 22px 22px 0; }
+  mat-card-content { padding: 0 22px 54px; }
 }
 
-.number {
-  position: absolute;
-  right: 20px;
-  top: 14px;
-  font-family: var(--font-display);
-  font-size: 2.2rem;
-  font-weight: 500;
-  font-style: italic;
-  color: rgba(201, 162, 74, 0.35);
-}
-
-.icon {
+.door-icon {
   width: 46px;
   height: 46px;
-  margin-bottom: 6px;
   border-radius: 14px;
   display: grid;
   place-items: center;
-  color: var(--burgundy);
-  background: var(--burgundy-soft);
-  transition: background 0.35s, color 0.35s;
-}
-
-.title {
-  font-family: var(--font-display);
-  font-size: 1.18rem;
-  font-weight: 600;
-  color: var(--burgundy-deep);
-}
-
-.text { font-size: 0.88rem; line-height: 1.5; color: var(--ink-soft); }
-
-.prompt {
-  margin-top: 6px;
-  padding-top: 12px;
-  border-top: 1px dashed var(--line-strong);
-  font-family: var(--font-display);
-  font-style: italic;
-  font-size: 0.9rem;
-  line-height: 1.45;
-  color: var(--ink);
-}
-
-.arrow {
-  position: absolute;
-  right: 18px;
-  bottom: 18px;
-  color: var(--gold-deep);
-  opacity: 0;
-  transform: translateX(-8px);
+  color: var(--red-ui);
+  background: var(--red-soft);
   transition: all 0.35s var(--ease-out);
 }
 
-// --- Exemples -----------------------------------------------------------------------------------------
+.door-step {
+  font-size: 0.68rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--red-ui) !important;
+}
+
+.door-title {
+  font-family: var(--font-display) !important;
+  font-size: 1.22rem !important;
+  font-weight: 700 !important;
+  line-height: 1.25 !important;
+  color: var(--gown) !important;
+}
+
+.door-text { margin: 14px 0 0; font-size: 0.86rem; line-height: 1.55; color: var(--ink-soft); }
+
+.door-prompt {
+  margin: 14px 0 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--canvas);
+  border-left: 3px solid var(--burgundy);
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 0.92rem;
+  line-height: 1.45;
+  color: var(--gown);
+}
+
+.door-arrow {
+  position: absolute;
+  right: 18px;
+  bottom: 16px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: var(--gown);
+  border: 1px solid var(--line-strong);
+  transition: all 0.35s var(--ease-out);
+
+  mat-icon { font-size: 18px; width: 18px; height: 18px; }
+}
+
+// ======================================================================================================
+// Exemples
+// ======================================================================================================
 .examples {
+  max-width: 1040px;
+  margin: 28px auto 0;
+  padding: 0 28px;
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
   align-items: center;
   gap: 10px;
-  margin-top: 30px;
-  animation: rise 0.8s var(--ease-out) 0.55s both;
+  animation: rise 0.8s var(--ease-out) 0.6s both;
 }
 
 .label {
-  font-size: 0.74rem;
+  font-size: 0.7rem;
   font-weight: 700;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
   color: var(--ink-soft);
 }
 
-.chip {
-  padding: 9px 15px;
-  border-radius: 999px;
-  border: 1px solid var(--line-strong);
-  background: rgba(255, 255, 255, 0.7);
-  color: var(--burgundy-deep);
-  font: inherit;
-  font-size: 0.86rem;
-  cursor: pointer;
-  transition: all 0.25s var(--ease-out);
-
-  &:hover { border-color: var(--gold); background: var(--gold-soft); transform: translateY(-2px); }
+.example {
+  @include mat.button-overrides((
+    outlined-label-text-color: var(--gown),
+    outlined-outline-color: var(--line-strong),
+    outlined-container-shape: 999px,
+  ));
+  background: rgba(255, 255, 255, 0.85);
+  font-weight: 500;
+  &:hover { border-color: var(--red); color: var(--red-ui); }
 }
 
-@keyframes rise { from { opacity: 0; transform: translateY(14px); } }
+@keyframes rise { from { opacity: 0; transform: translateY(16px); } }
 
-@media (max-width: 860px) {
-  .doors { grid-template-columns: 1fr; gap: 12px; margin-top: 28px; }
-  .door { padding: 18px; }
-  .prompt { display: none; }
-  .arrow { opacity: 1; transform: none; top: 50%; bottom: auto; margin-top: -12px; }
-  .number { display: none; }
+// ======================================================================================================
+// Tablette et mobile
+// ======================================================================================================
+@media (max-width: 900px) {
+  :host { margin: 0 -14px; }
+  .hero { min-height: 0; padding: 44px 20px 100px; }
+  .doors { grid-template-columns: 1fr; gap: 12px; padding: 0 14px; margin-top: -70px; }
+  .door mat-card-content { padding-bottom: 20px; }
+  .door-prompt { display: none; }
+  .door-arrow { top: 28px; bottom: auto; }
+  .examples { padding: 0 14px; }
+  .beam { width: 120px; }
 }

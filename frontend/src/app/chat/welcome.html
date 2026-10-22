@@ -1,33 +1,57 @@
-<section class="welcome">
-  <div class="emblem" aria-hidden="true">
-    <span class="halo"></span>
-    <app-sun-mark [size]="76" [spin]="true" />
+<section class="hero">
+  <div class="photo" aria-hidden="true"></div>
+  <div class="shade" aria-hidden="true"></div>
+
+  <!-- Projecteurs de la cérémonie -->
+  <div class="beams" aria-hidden="true">
+    <span class="beam left"></span>
+    <span class="beam left late"></span>
+    <span class="beam right"></span>
+    <span class="beam right late"></span>
   </div>
 
-  <p class="eyebrow">Assistant d'admission</p>
-  <h1>Bienvenue, <em>futur·e étudiant·e</em></h1>
-  <p class="lead">
-    Je suis Lumen. Je vous éclaire sur la procédure d'admission, je vous aide à trouver la formation
-    qui vous ressemble et je vous accompagne jusqu'à votre demande d'inscription.
-  </p>
-
-  <div class="doors">
-    @for (door of doors; track door.title; let index = $index) {
-      <button type="button" class="door" [style.animation-delay.ms]="200 + index * 110" (click)="pick.emit(door.prompt)">
-        <span class="number">0{{ index + 1 }}</span>
-        <span class="icon"><mat-icon>{{ door.icon }}</mat-icon></span>
-        <span class="title">{{ door.title }}</span>
-        <span class="text">{{ door.text }}</span>
-        <span class="prompt">« {{ door.prompt }} »</span>
-        <mat-icon class="arrow">arrow_forward</mat-icon>
-      </button>
+  <!-- Toques lancées en l'air -->
+  <div class="caps" aria-hidden="true">
+    @for (cap of caps; track $index) {
+      <span class="cap" [style.left.%]="cap.left" [style.animation-duration.s]="cap.duration"
+            [style.animation-delay.s]="cap.delay" [style.--turn]="cap.turn + 'deg'">
+        <app-cap-mark [size]="cap.size" />
+      </span>
     }
   </div>
 
-  <div class="examples">
-    <span class="label">Essayez aussi</span>
-    @for (example of examples; track example) {
-      <button type="button" class="chip" (click)="pick.emit(example)">{{ example }}</button>
-    }
+  <div class="hero-content">
+    <p class="overline"><span></span>Assistant d'admission<span></span></p>
+    <h1>Votre cap vers le <em>diplôme</em></h1>
+    <p class="lead">
+      Procédure d'admission, choix de la formation, vérification de votre profil et demande d'inscription :
+      je vous accompagne à chaque étape, jusqu'au jour de votre remise de diplôme.
+    </p>
   </div>
 </section>
+
+<div class="doors">
+  @for (door of doors; track door.title; let index = $index) {
+    <mat-card appearance="outlined" class="door" [style.animation-delay.ms]="250 + index * 120"
+              role="button" tabindex="0" (click)="pick.emit(door.prompt)"
+              (keydown.enter)="pick.emit(door.prompt)" (keydown.space)="$event.preventDefault(); pick.emit(door.prompt)">
+      <mat-card-header>
+        <span mat-card-avatar class="door-icon"><mat-icon>{{ door.icon }}</mat-icon></span>
+        <mat-card-subtitle class="door-step">{{ door.step }}</mat-card-subtitle>
+        <mat-card-title class="door-title">{{ door.title }}</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <p class="door-text">{{ door.text }}</p>
+        <p class="door-prompt">« {{ door.prompt }} »</p>
+      </mat-card-content>
+      <span class="door-arrow" aria-hidden="true"><mat-icon>arrow_forward</mat-icon></span>
+    </mat-card>
+  }
+</div>
+
+<div class="examples">
+  <span class="label">Essayez aussi</span>
+  @for (example of examples; track example) {
+    <button mat-stroked-button type="button" class="example" (click)="pick.emit(example)">{{ example }}</button>
+  }
+</div>

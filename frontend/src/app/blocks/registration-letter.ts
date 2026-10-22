@@ -1,17 +1,19 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
+import { MatCardModule } from '@angular/material/card';
+import { MatDividerModule } from '@angular/material/divider';
 import { MatIconModule } from '@angular/material/icon';
 
 import { SummaryAction, SummaryBlock } from '../core/models';
-import { SunMark } from '../shared/sun-mark';
+import { CapMark } from '../shared/cap-mark';
 
 /**
- * Récapitulatif de la demande, présenté comme une lettre de candidature.
+ * Récapitulatif de la demande, présenté comme un dossier de candidature officiel.
  * Confirmation explicite par bouton uniquement ; seul le dernier récapitulatif reste actif.
  */
 @Component({
   selector: 'app-registration-letter',
-  imports: [MatButtonModule, MatIconModule, SunMark],
+  imports: [MatButtonModule, MatCardModule, MatDividerModule, MatIconModule, CapMark],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './registration-letter.html',
   styleUrl: './registration-letter.scss',

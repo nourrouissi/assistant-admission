@@ -1,7 +1,9 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 
 import { ResultBlock } from '../core/models';
+import { CapMark } from '../shared/cap-mark';
 
 const OTHER_OUTCOMES = {
   duplicate: { icon: 'content_copy', label: 'Demande déjà existante', tone: 'amber' },
@@ -10,12 +12,12 @@ const OTHER_OUTCOMES = {
 } as const;
 
 /**
- * Issue de l'inscription. Demande enregistrée : un sceau de cire se pose, avec le statut « Nouvelle ».
+ * Issue de l'inscription. Demande enregistrée : les toques s'envolent, avec le statut « Nouvelle ».
  * Autres issues : une étiquette discrète (le texte de l'assistant les explique déjà).
  */
 @Component({
   selector: 'app-registration-seal',
-  imports: [MatIconModule],
+  imports: [MatCardModule, MatIconModule, CapMark],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './registration-seal.html',
   styleUrl: './registration-seal.scss',
@@ -28,14 +30,21 @@ export class RegistrationSeal {
     return outcome === 'created' ? null : OTHER_OUTCOMES[outcome];
   });
 
-  // Bord de la cire (festons) et rayons du soleil frappé dans le sceau
-  protected readonly bumps = Array.from({ length: 18 }, (_, index) => {
-    const angle = (index * 20 * Math.PI) / 180;
-    return { x: 60 + 47 * Math.cos(angle), y: 60 + 47 * Math.sin(angle) };
-  });
-  protected readonly rays = Array.from({ length: 16 }, (_, index) => index * 22.5);
-  protected readonly sparks = Array.from({ length: 12 }, (_, index) => {
-    const angle = (index * 30 * Math.PI) / 180;
-    return { dx: Math.round(Math.cos(angle) * 110), dy: Math.round(Math.sin(angle) * 80) };
-  });
+  // Toques lancées : position de départ, hauteur, rotation, délai
+  protected readonly caps = [
+    { x: 14, rise: 150, turn: -40, delay: 0.1, size: 30 },
+    { x: 30, rise: 190, turn: 35, delay: 0.25, size: 24 },
+    { x: 48, rise: 210, turn: -20, delay: 0, size: 36 },
+    { x: 66, rise: 180, turn: 45, delay: 0.2, size: 26 },
+    { x: 84, rise: 155, turn: -35, delay: 0.35, size: 30 },
+  ];
+
+  // Confettis rouges, bordeaux et blancs
+  protected readonly confetti = Array.from({ length: 26 }, (_, index) => ({
+    x: (index * 37) % 100,
+    drift: ((index * 53) % 80) - 40,
+    delay: ((index * 17) % 10) / 20,
+    color: ['#e2231a', '#6d1f2f', '#ffffff', '#231f20'][index % 4],
+    spin: 180 + ((index * 41) % 360),
+  }));
 }

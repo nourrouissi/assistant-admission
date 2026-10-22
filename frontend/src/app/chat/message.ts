@@ -6,12 +6,12 @@ import { RegistrationLetter } from '../blocks/registration-letter';
 import { RegistrationSeal } from '../blocks/registration-seal';
 import { formatText } from '../core/format';
 import { Entry, FormationCard, SummaryAction } from '../core/models';
-import { SunMark } from '../shared/sun-mark';
+import { CapMark } from '../shared/cap-mark';
 
-/** Une entrée du fil : message du prospect, réponse de Lumen (blocs) ou avertissement. */
+/** Une entrée du fil : message du prospect, réponse de l'assistant (blocs) ou avertissement. */
 @Component({
   selector: 'app-message',
-  imports: [MatIconModule, SunMark, FormationsCarousel, RegistrationLetter, RegistrationSeal],
+  imports: [MatIconModule, CapMark, FormationsCarousel, RegistrationLetter, RegistrationSeal],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './message.html',
   styleUrl: './message.scss',

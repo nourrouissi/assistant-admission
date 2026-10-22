@@ -1,40 +1,47 @@
-<article class="card" [attr.aria-label]="card().specialty + ', ' + card().diploma + ', ' + card().school">
-  <header class="band">
-    <span class="school"><mat-icon>location_on</mat-icon>{{ card().school }}</span>
-    <span class="seal" [title]="card().diploma">
-      <span>{{ short() }}</span>
-    </span>
-  </header>
+<mat-card appearance="outlined" class="diploma" [attr.aria-label]="card().specialty + ', ' + card().diploma + ', ' + card().school">
+  <!-- Ruban suspendu : sigle du diplôme et sceau -->
+  <span class="ribbon" [title]="card().diploma" aria-hidden="true">
+    <span class="ribbon-text">{{ short() }}</span>
+  </span>
 
-  <div class="body">
-    <p class="diploma">{{ card().diploma }}</p>
-    <h3 class="specialty">{{ card().specialty }}</h3>
+  <div class="frame">
+    <mat-card-header>
+      <mat-card-subtitle class="overline">Diplôme</mat-card-subtitle>
+      <mat-card-title class="specialty">{{ card().specialty }}</mat-card-title>
+      <mat-card-subtitle class="label">{{ card().diploma }}</mat-card-subtitle>
+    </mat-card-header>
 
-    <dl class="criteria">
-      @for (item of criteria(); track item.label) {
-        <div>
-          <dt><mat-icon>{{ item.icon }}</mat-icon>{{ item.label }}</dt>
-          <dd>{{ item.value }}</dd>
+    <mat-card-content>
+      <p class="school"><mat-icon>account_balance</mat-icon>{{ card().school }}</p>
+
+      <mat-divider />
+
+      <dl class="criteria">
+        @for (item of criteria(); track item.label) {
+          <div>
+            <dt><mat-icon>{{ item.icon }}</mat-icon>{{ item.label }}</dt>
+            <dd>{{ item.value }}</dd>
+          </div>
+        }
+      </dl>
+
+      @if (card().criteria_under_review) {
+        <p class="review"><mat-icon>pending</mat-icon>Critères en cours de vérification par l'équipe des admissions</p>
+      }
+
+      @if (verdict(); as v) {
+        <div class="verdict" [attr.data-status]="v.status">
+          <span class="stamp"><mat-icon>{{ v.icon }}</mat-icon>{{ v.label }}</span>
+          <p>{{ v.message }}</p>
         </div>
       }
-    </dl>
+    </mat-card-content>
 
-    @if (card().criteria_under_review) {
-      <p class="review"><mat-icon>pending</mat-icon>Critères en cours de vérification par l'équipe des admissions</p>
-    }
-
-    @if (verdict(); as v) {
-      <div class="verdict" [attr.data-status]="v.status">
-        <span class="stamp"><mat-icon>{{ v.icon }}</mat-icon>{{ v.label }}</span>
-        <p>{{ v.message }}</p>
-      </div>
-    }
+    <mat-card-actions>
+      <button mat-flat-button class="enroll" type="button" [disabled]="disabled()" (click)="register.emit(card())">
+        <mat-icon>history_edu</mat-icon>
+        S'inscrire
+      </button>
+    </mat-card-actions>
   </div>
-
-  <footer>
-    <button mat-flat-button class="enroll" type="button" [disabled]="disabled()" (click)="register.emit(card())">
-      S'inscrire
-      <mat-icon iconPositionEnd>arrow_forward</mat-icon>
-    </button>
-  </footer>
-</article>
+</mat-card>

@@ -1,17 +1,19 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
+import { MatCardModule } from '@angular/material/card';
+import { MatDividerModule } from '@angular/material/divider';
 import { MatIconModule } from '@angular/material/icon';
 
 import { ELIGIBILITY_LABELS, criterion, diplomaShort } from '../core/format';
 import { FormationCard as Card } from '../core/models';
 
 /**
- * Carte « diplôme » d'une formation : sceau du type de diplôme, spécialité, école,
+ * Carte d'une formation présentée comme un diplôme : ruban du type de diplôme, spécialité, école,
  * critères officiels, et tampon d'éligibilité quand les critères ont été vérifiés.
  */
 @Component({
   selector: 'app-formation-card',
-  imports: [MatButtonModule, MatIconModule],
+  imports: [MatButtonModule, MatCardModule, MatDividerModule, MatIconModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './formation-card.html',
   styleUrl: './formation-card.scss',

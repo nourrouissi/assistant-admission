@@ -1,31 +1,40 @@
-<article class="letter" [class.closed]="!open()" aria-label="Récapitulatif de votre demande d'inscription">
+<mat-card class="dossier" [class.closed]="!open()" aria-label="Récapitulatif de votre demande d'inscription">
   <header class="head">
-    <app-sun-mark [size]="38" class="sun" />
+    <span class="head-cap"><app-cap-mark [size]="30" /></span>
     <div>
-      <p class="eyebrow">Récapitulatif</p>
-      <h3>Demande d'inscription</h3>
+      <p class="eyebrow">Dossier de candidature</p>
+      <h3>Récapitulatif de votre demande</h3>
     </div>
+    <span class="tab" aria-hidden="true">À vérifier</span>
   </header>
+  <div class="head-line" aria-hidden="true"></div>
 
-  <section class="formation">
-    <p class="label">Formation choisie</p>
-    <p class="specialty">{{ block().formation.specialty }}</p>
-    <p class="meta">{{ block().formation.diploma }} · {{ block().formation.school }}</p>
-  </section>
+  <mat-card-content>
+    <section class="formation">
+      <p class="label">Formation demandée</p>
+      <p class="specialty">{{ block().formation.specialty }}</p>
+      <p class="meta">
+        <span>{{ block().formation.diploma }}</span>
+        <span class="dot">•</span>
+        <span>{{ block().formation.school }}</span>
+      </p>
+    </section>
 
-  <div class="perforation" aria-hidden="true"></div>
+    <mat-divider />
 
-  <dl class="applicant">
-    @for (field of fields(); track field.label) {
-      <div>
-        <dt><mat-icon>{{ field.icon }}</mat-icon>{{ field.label }}</dt>
-        <dd>{{ field.value }}</dd>
-      </div>
-    }
-  </dl>
+    <p class="label section">Candidat</p>
+    <dl class="applicant">
+      @for (field of fields(); track field.label) {
+        <div>
+          <dt><mat-icon>{{ field.icon }}</mat-icon>{{ field.label }}</dt>
+          <dd>{{ field.value }}</dd>
+        </div>
+      }
+    </dl>
+  </mat-card-content>
 
   @if (open()) {
-    <footer class="actions">
+    <mat-card-actions class="actions">
       <p class="note">
         <mat-icon>info</mat-icon>
         Vérifiez vos informations : la demande n'est enregistrée qu'après votre confirmation.
@@ -33,7 +42,7 @@
       <div class="buttons">
         <button mat-flat-button class="confirm" type="button" [disabled]="pending()" (click)="act.emit('confirm')">
           <mat-icon>verified</mat-icon>
-          Confirmer
+          Confirmer ma demande
         </button>
         <button mat-stroked-button class="modify" type="button" [disabled]="pending()" (click)="act.emit('modify')">
           <mat-icon>edit</mat-icon>
@@ -43,8 +52,8 @@
           Annuler
         </button>
       </div>
-    </footer>
+    </mat-card-actions>
   } @else {
-    <footer class="archived"><mat-icon>history</mat-icon>Ce récapitulatif n'est plus en attente.</footer>
+    <p class="archived"><mat-icon>history</mat-icon>Ce récapitulatif n'est plus en attente.</p>
   }
-</article>
+</mat-card>

@@ -9,18 +9,23 @@ import {
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule, MatIconRegistry } from '@angular/material/icon';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { Composer } from './chat/composer';
 import { Message } from './chat/message';
 import { Welcome } from './chat/welcome';
 import { ChatStore } from './core/chat-store';
-import { Journey } from './shared/journey';
-import { SunMark } from './shared/sun-mark';
+import { CapMark } from './shared/cap-mark';
+import { CeremonyPath } from './shared/ceremony-path';
 
 @Component({
   selector: 'app-root',
-  imports: [MatButtonModule, MatIconModule, MatTooltipModule, Composer, Message, Welcome, Journey, SunMark],
+  imports: [
+    MatButtonModule, MatIconModule, MatProgressBarModule, MatToolbarModule, MatTooltipModule,
+    Composer, Message, Welcome, CapMark, CeremonyPath,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './app.html',
   styleUrl: './app.scss',
@@ -34,9 +39,7 @@ export class App {
 
   /** Texte d'aide de la zone de saisie, selon l'étape de l'inscription. */
   protected readonly placeholder = computed(() =>
-    this.store.registration() === 'collect'
-      ? 'Nom, prénom, e-mail, téléphone…'
-      : 'Posez votre question…',
+    this.store.registration() === 'collect' ? 'Nom, prénom, e-mail, téléphone…' : 'Posez votre question…',
   );
 
   constructor() {

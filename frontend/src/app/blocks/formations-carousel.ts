@@ -36,16 +36,17 @@ import { FormationCard } from './formation-card';
   styles: `
     :host { display: block; min-width: 0; }
     header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 2px 10px; }
-    h4 { display: flex; align-items: center; gap: 10px; font-size: 1.02rem; color: var(--burgundy-deep); }
+    h4 { display: flex; align-items: center; gap: 10px; font-size: 1.08rem; color: var(--gown); }
     .count {
       display: grid; place-items: center; min-width: 28px; height: 28px; padding: 0 8px; border-radius: 999px;
       font-family: var(--font-text); font-size: 0.8rem; font-weight: 700;
-      color: var(--burgundy-night); background: linear-gradient(135deg, var(--gold-light), var(--gold));
+      color: #ffffff; background: linear-gradient(135deg, var(--red), var(--burgundy));
+      box-shadow: 0 6px 14px -6px rgba(226, 35, 26, 0.8);
     }
-    .nav { display: flex; gap: 2px; color: var(--burgundy); }
+    .nav { display: flex; gap: 2px; color: var(--gown); }
     .track {
       display: flex; gap: 16px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: smooth;
-      padding: 6px 4px 18px; margin: 0 -4px;
+      padding: 8px 4px 20px; margin: 0 -4px;
       mask-image: linear-gradient(to right, transparent, #000 10px, #000 calc(100% - 28px), transparent);
     }
     app-formation-card {

@@ -1,0 +1,116 @@
+// Variante sombre par défaut (dans la barre noire du haut)
+:host { display: block; }
+
+.path {
+  --node: 30px;
+  font-family: var(--font-text);
+  --track-color: rgba(255, 255, 255, 0.16);
+  --text: rgba(255, 255, 255, 0.55);
+  --text-strong: #ffffff;
+  position: relative;
+  width: 100%;
+  max-width: 460px;
+  margin: 0 auto;
+}
+
+.track {
+  position: absolute;
+  left: calc(var(--node) / 2);
+  right: calc(var(--node) / 2);
+  top: calc(var(--node) / 2 - 1.5px);
+  height: 3px;
+  border-radius: 3px;
+  background: var(--track-color);
+  overflow: hidden;
+}
+
+.fill {
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--burgundy), var(--red));
+  box-shadow: 0 0 12px rgba(226, 35, 26, 0.8);
+  transition: width 0.9s var(--ease-out);
+}
+
+ol {
+  position: relative;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  justify-content: space-between;
+}
+
+li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  width: var(--node);
+  overflow: visible;
+}
+
+.node {
+  width: var(--node);
+  height: var(--node);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--gown);
+  border: 1.5px solid rgba(255, 255, 255, 0.28);
+  color: rgba(255, 255, 255, 0.6);
+  transition: all 0.5s var(--ease-out);
+
+  mat-icon { font-size: 16px; width: 16px; height: 16px; }
+}
+
+.label {
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--text);
+  transition: color 0.4s;
+}
+
+[data-state='done'] .node {
+  background: var(--red);
+  border-color: var(--red);
+  color: #ffffff;
+}
+
+[data-state='active'] .node {
+  background: #ffffff;
+  border-color: #ffffff;
+  color: var(--red-ui);
+  box-shadow: 0 0 0 5px rgba(226, 35, 26, 0.35);
+  animation: pulse 2.2s ease-in-out infinite;
+}
+
+[data-state='active'] .label, [data-state='done'] .label { color: var(--text-strong); }
+
+.goal .node { color: rgba(255, 255, 255, 0.55); --tassel: rgba(226, 35, 26, 0.6); }
+.goal[data-state='done'] .node {
+  background: #ffffff;
+  border-color: #ffffff;
+  color: var(--gown);
+  --tassel: var(--red);
+  animation: toss 0.9s var(--ease-out);
+}
+
+@keyframes pulse { 50% { box-shadow: 0 0 0 9px rgba(226, 35, 26, 0.12); } }
+@keyframes toss {
+  40% { transform: translateY(-10px) rotate(-18deg); }
+  100% { transform: none; }
+}
+
+// --- Variante compacte : seule l'étape en cours garde son libellé ------------------------------------
+.compact {
+  --node: 24px;
+  max-width: 300px;
+
+  .node mat-icon { font-size: 13px; width: 13px; height: 13px; }
+  .label { font-size: 0.58rem; }
+  li:not([data-state='active']) .label { visibility: hidden; }
+}

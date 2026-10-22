@@ -293,7 +293,7 @@ Conversations et limite de requêtes :
 
 ## 4. Frontend Angular
 
-L'interface s'appelle **Lumen** (« lumière » en latin) : l'assistant qui éclaire le parcours d'admission. Palette bordeaux, ivoire et or, titres en *Fraunces* et texte en *Inter*.
+L'interface s'appelle **Cap Diplôme** (« votre cap vers le diplôme ») et reprend l'univers de la **remise de diplôme** : photo de cérémonie, projecteurs, toques lancées en l'air. Couleurs des logos de l'établissement : rouge (Université Centrale), bordeaux (Honoris), noir des toges et blanc. Titres en *Playfair Display*, texte en *Montserrat*. Composants **Angular Material** (`mat-toolbar`, `mat-card`, `mat-form-field`, `mat-progress-bar`, boutons, icônes, info-bulles), personnalisés avec ce thème.
 
 Depuis le dossier `frontend`, avec le backend lancé sur le port 8000 :
 
@@ -308,12 +308,12 @@ Ce que l'interface affiche, à partir des blocs renvoyés par `/api/chat/` (elle
 
 | Élément | Rôle |
 |---|---|
-| Écran d'accueil | Trois portes d'entrée (procédure, formations, candidature) et des exemples de questions |
-| Fil « Votre parcours » | Découvrir → Vérifier → Candidater, déduit des blocs reçus et du champ `registration` |
-| Cartes de formation | Sceau du type de diplôme, spécialité, école, critères officiels ; tampon d'éligibilité (critères remplis, à confirmer, infos manquantes, critère non rempli) ; bouton « S'inscrire » |
-| Récapitulatif | Lettre de candidature avec les boutons Confirmer / Modifier / Annuler ; seul le dernier récapitulatif en attente reste actif |
+| Écran d'accueil | Scène de cérémonie (photo, projecteurs animés, toques lancées), trois portes d'entrée (procédure, formations, candidature) et des exemples de questions |
+| Chemin vers le diplôme | Découvrir → Vérifier → Candidater → toque, dans la barre du haut ; déduit des blocs reçus et du champ `registration` |
+| Cartes de formation | Présentées comme des diplômes : ruban rouge avec le sigle du diplôme, spécialité, école, critères officiels ; tampon d'éligibilité (critères remplis, à confirmer, infos manquantes, critère non rempli) ; bouton « S'inscrire » |
+| Récapitulatif | Dossier de candidature avec les boutons Confirmer / Modifier / Annuler ; seul le dernier récapitulatif en attente reste actif |
 | Bandeau d'inscription | Pendant la collecte des coordonnées : rappel de l'étape et bouton « Annuler » |
-| Confirmation | Sceau de cire avec le statut « Nouvelle » (`registration_result` = `created`) ; étiquette discrète pour un doublon, une formation indisponible ou une annulation |
+| Confirmation | Toques lancées et confettis, avec le statut « Nouvelle » (`registration_result` = `created`) ; étiquette discrète pour un doublon, une formation indisponible ou une annulation |
 | Erreurs | Message clair pour la limite de requêtes (429) ou un serveur injoignable |
 
 La conversation (identifiant de session et messages affichés) est gardée dans le navigateur : un rafraîchissement de la page ne l'efface pas. « Nouvelle conversation » repart de zéro.
@@ -321,8 +321,8 @@ La conversation (identifiant de session et messages affichés) est gardée dans 
 Organisation du code (`frontend/src/app`) :
 - `core/` : contrat de l'API (`models.ts`), appel HTTP (`chat-api.ts`), état de la conversation en signals (`chat-store.ts`), parcours (`journey.ts`), mise en forme des textes (`format.ts`) ;
 - `chat/` : accueil, message, zone de saisie ;
-- `blocks/` : carte de formation, carrousel, récapitulatif, sceau de confirmation ;
-- `shared/` : soleil animé (signature visuelle), fil du parcours.
+- `blocks/` : carte de formation, carrousel, récapitulatif, confirmation ;
+- `shared/` : toque animée (signature visuelle), chemin vers le diplôme.
 
 ## 5. Tests
 
@@ -359,7 +359,7 @@ assistant-admission/
 │   ├── chatbot/              # Assistant : modèles de langage, agent LangGraph, inscription, mémoire, API /api/chat/
 │   ├── data/                 # Fichier Excel des formations et document de procédure
 │   └── tests/                # Tests automatisés
-└── frontend/                 # Application Angular « Lumen »
+└── frontend/                 # Application Angular « Cap Diplôme »
     ├── proxy.conf.json       # /api -> Django (développement)
     └── src/app/              # core, chat, blocks, shared (voir section 4)
 ```

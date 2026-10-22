@@ -1,0 +1,48 @@
+@use '@angular/material' as mat;
+
+:host { display: block; }
+
+.field {
+  width: 100%;
+  @include mat.form-field-overrides((
+    outlined-container-shape: 28px,
+    outlined-outline-color: rgba(35, 31, 32, 0.18),
+    outlined-hover-outline-color: rgba(35, 31, 32, 0.35),
+    outlined-focus-outline-color: #e2231a,
+    outlined-focus-outline-width: 2px,
+    outlined-input-text-color: #231f20,
+    outlined-input-text-placeholder-color: #8a8083,
+    container-text-size: 15px,
+    container-vertical-padding: 14px,
+  ));
+
+  ::ng-deep .mdc-text-field--outlined {
+    background: var(--white);
+    border-radius: 28px;
+    box-shadow: var(--shadow-soft);
+  }
+}
+
+.prefix { margin: 0 4px 0 14px; color: var(--burgundy); }
+
+textarea { line-height: 1.5; resize: none; }
+
+.send {
+  @include mat.button-overrides((
+    filled-container-color: #e2231a,
+    filled-label-text-color: #ffffff,
+    filled-container-shape: 999px,
+    filled-container-height: 44px,
+    filled-horizontal-padding: 0,
+  ));
+  min-width: 44px;
+  width: 44px;
+  margin-right: 8px;
+  box-shadow: 0 8px 18px -8px rgba(226, 35, 26, 0.9);
+  transition: transform 0.25s var(--ease-out), background 0.3s;
+
+  mat-icon { margin: 0; font-size: 20px; width: 20px; height: 20px; }
+
+  &:not(:disabled):hover { transform: translateY(-2px) rotate(-12deg); background: var(--burgundy); }
+  &:disabled { box-shadow: none; }
+}
