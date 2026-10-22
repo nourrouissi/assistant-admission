@@ -45,6 +45,8 @@ INSTALLED_APPS = [
     "corsheaders",
     # Applications du projet : ajoutées au fil des étapes
     "catalog",      # Formations : normalisation, import Excel, recherche, éligibilité
+    "knowledge",    # Procédure d'admission : indexation et RAG
+    "chatbot",      # Assistant conversationnel : agent LangGraph et API /api/chat/
 ]
 
 MIDDLEWARE = [
@@ -124,4 +126,20 @@ EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", False)
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "admissions@example.test")
 BUSINESS_TEAM_EMAILS = env_list("BUSINESS_TEAM_EMAILS", "admissions@example.test")
 # Contact affiché quand l'assistant oriente vers le service des admissions
-ADMISSIONS_CONTACT = os.getenv("ADMISSIONS_CONTACT", "admissions@example.test")
+ADMISSIONS_CONTACT = os.getenv("ADMISSIONS_CONTACT", "admissions@test.local")
+
+# --- Assistant : modèles de langage (API compatible OpenAI) ---------------------------
+# Chaîne de secours : modèle principal -> second modèle (même fournisseur) -> autre fournisseur.
+# Les noms de modèles sont uniquement dans le .env, jamais dans le code.
+LLM_PRIMARY_BASE_URL = os.getenv("LLM_PRIMARY_BASE_URL", "")
+LLM_PRIMARY_API_KEY = os.getenv("LLM_PRIMARY_API_KEY", "")
+LLM_PRIMARY_MODEL = os.getenv("LLM_PRIMARY_MODEL", "")
+LLM_SECONDARY_MODEL = os.getenv("LLM_SECONDARY_MODEL", "")
+LLM_FALLBACK_BASE_URL = os.getenv("LLM_FALLBACK_BASE_URL", "")
+LLM_FALLBACK_API_KEY = os.getenv("LLM_FALLBACK_API_KEY", "")
+LLM_FALLBACK_MODEL = os.getenv("LLM_FALLBACK_MODEL", "")
+
+# --- Assistant : embeddings et document de procédure -----------------------------------
+EMBEDDINGS_PROVIDER = os.getenv("EMBEDDINGS_PROVIDER", "local")
+EMBEDDINGS_MODEL = os.getenv("EMBEDDINGS_MODEL", "")
+PROCEDURE_DOCUMENT = BASE_DIR / "data" / "procedure_admission.docx"

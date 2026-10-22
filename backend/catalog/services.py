@@ -109,6 +109,34 @@ def search_formations(query: str = "", school: str = "", diploma_type: str = "")
     return search_catalog(query, school, diploma_type).formations
 
 
+def eligibility_cards(formations: list[Formation], profile) -> tuple[list[dict], list[str]]:
+    """
+    Cartes des formations évaluées pour un profil, et informations à demander au prospect.
+
+    Sert à l'API (/api/formations/eligibility/) et à l'outil de l'assistant.
+    Sujet : « puis affiner les résultats selon les informations reçues » : tri par
+    statut (compatible d'abord) ; sort() est stable, donc à statut égal l'ordre de
+    la recherche est conservé.
+    """
+    from .eligibility import evaluate, message_for, missing_information, status_rank
+    from .serializers import FormationSerializer
+
+    evaluated = [(formation, evaluate(formation, profile)) for formation in formations]
+    evaluated.sort(key=lambda pair: status_rank(pair[1].status))
+
+    cards = []
+    for formation, evaluation in evaluated:
+        card = FormationSerializer(formation).data
+        card["eligibility"] = {
+            "status": evaluation.status,
+            "missing": evaluation.missing,
+            "reasons": evaluation.reasons,
+            "message": message_for(evaluation),
+        }
+        cards.append(card)
+    return cards, missing_information([evaluation for _, evaluation in evaluated])
+
+
 def formations_by_ids(ids: list[int]) -> tuple[list[Formation], list[int]]:
     """
     Formations actives demandées par identifiant, et identifiants introuvables.

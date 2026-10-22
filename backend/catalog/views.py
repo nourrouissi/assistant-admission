@@ -4,9 +4,9 @@ from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from .eligibility import Profile, evaluate, message_for, missing_information, status_rank
+from .eligibility import Profile
 from .serializers import MAX_EVALUATED, EligibilityRequestSerializer, FormationSerializer, SearchParamsSerializer
-from .services import SearchResult, formations_by_ids, search_catalog
+from .services import SearchResult, eligibility_cards, formations_by_ids, search_catalog
 
 
 class FormationViewSet(viewsets.ReadOnlyModelViewSet):
@@ -70,26 +70,11 @@ class FormationViewSet(viewsets.ReadOnlyModelViewSet):
             formations = list(result.formations[:MAX_EVALUATED])
             search_details = {"unmatched_terms": result.unmatched_terms}
 
-        evaluated = [(formation, evaluate(formation, profile)) for formation in formations]
-        # Sujet : « puis affiner les résultats selon les informations reçues » :
-        # tri par statut (compatible d'abord) ; sort() est stable, donc à statut
-        # égal l'ordre de la recherche est conservé.
-        evaluated.sort(key=lambda pair: status_rank(pair[1].status))
-
-        results = []
-        for formation, evaluation in evaluated:
-            card = FormationSerializer(formation).data
-            card["eligibility"] = {
-                "status": evaluation.status,
-                "missing": evaluation.missing,
-                "reasons": evaluation.reasons,
-                "message": message_for(evaluation),
-            }
-            results.append(card)
+        results, missing = eligibility_cards(formations, profile)
 
         return Response({
             "count": len(results),
-            "missing_information": missing_information([evaluation for _, evaluation in evaluated]),
+            "missing_information": missing,
             "unknown_formation_ids": unknown_ids,
             **search_details,
             "results": results,

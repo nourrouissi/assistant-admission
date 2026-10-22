@@ -6,7 +6,7 @@ Assistant conversationnel qui accompagne les prospects de l'information jusqu'à
 2. **Recherche de formations** : propositions issues de la base des formations selon le diplôme souhaité, la spécialité ou l'école, affichées dès que possible sous forme de cartes (diplôme, spécialité, école, critères d'éligibilité), puis affinées au fil de la conversation. L'assistant peut demander le niveau d'études, la nationalité ou la nature du baccalauréat pour vérifier les critères, mais ne confirme jamais une éligibilité sans les informations nécessaires.
 3. **Inscription conversationnelle** : collecte et validation du nom, du prénom, de l'e-mail et du téléphone ; choix d'une formation existante, avec demande de précision si plusieurs correspondent ; récapitulatif et enregistrement **uniquement après confirmation explicite**, avec le statut « Nouvelle » et sans doublon (e-mail ou téléphone) ; puis notification par e-mail à l'équipe des admissions et confirmation au prospect. L'admission n'est jamais garantie : la décision finale appartient à l'équipe des admissions.
 
-**Stack :** Django REST Framework · Angular · LangGraph · Google Gemini (secours : Groq) · PostgreSQL + pgvector · Docker
+**Stack :** Django REST Framework · Angular · LangGraph · Gemini via API compatible OpenAI (secours : second modèle Gemini, puis Groq) · embeddings multilingual-e5 (exécutés en local) · PostgreSQL + pgvector · Docker
 
 > 🚧 Projet en cours de développement : les sections marquées « *à venir* » seront complétées au fil des étapes.
 
@@ -68,8 +68,10 @@ Ouvrir `.env` et renseigner au minimum :
 |---|---|
 | `DJANGO_SECRET_KEY` | Clé secrète Django (générée à l'étape 3 du backend) |
 | `POSTGRES_PASSWORD` | Un mot de passe de votre choix (lettres et chiffres) |
-| `GEMINI_API_KEY` | Votre clé Google Gemini |
-| `GROQ_API_KEY` | Votre clé Groq |
+| `LLM_PRIMARY_API_KEY` | Votre clé Google Gemini (modèle principal et premier secours) |
+| `LLM_FALLBACK_API_KEY` | Votre clé Groq (second secours) |
+
+Les noms des modèles (`LLM_PRIMARY_MODEL`, `LLM_SECONDARY_MODEL`, `LLM_FALLBACK_MODEL`, `EMBEDDINGS_MODEL`) sont déjà renseignés dans `.env.example`.
 
 > ⚠️ Le fichier `.env` contient des secrets : il est ignoré par Git et ne doit jamais être partagé. Seul `.env.example`, sans valeurs secrètes, est versionné.
 
@@ -145,7 +147,15 @@ python manage.py import_formations
 
 Résultat attendu : `89 formations importées`, suivi d'un rapport des anomalies détectées dans le fichier (lignes à faire vérifier par l'équipe des admissions ; elles sont importées sans modification). La commande peut être relancée sans risque : elle met à jour les formations existantes au lieu de les dupliquer.
 
-**6. Créer un compte d'administration** et lancer le serveur
+**6. Indexer le document de procédure** `data/procedure_admission.docx` dans la base vectorielle
+
+```bash
+python manage.py index_procedure
+```
+
+Résultat attendu : `5 sections indexées` (les sections 1 à 5 du document ; la section 6 contient les consignes du chatbot, reprises dans ses instructions). Au premier lancement, le modèle d'embeddings `intfloat/multilingual-e5-small` est téléchargé (environ 450 Mo, une seule fois). La commande peut être relancée sans créer de doublons.
+
+**7. Créer un compte d'administration** et lancer le serveur
 
 ```bash
 python manage.py createsuperuser
@@ -226,6 +236,22 @@ Extrait de la réponse :
 }
 ```
 
+### Discuter avec l'assistant
+
+`POST /api/chat/` envoie un message à l'assistant. Corps JSON : `message` (obligatoire) et `session_id` (facultatif : sans lui, une nouvelle conversation est créée et son identifiant est renvoyé ; il faut le renvoyer à chaque message pour garder la conversation).
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/chat/   -H "Content-Type: application/json"   -d '{"session_id": "demo-1", "message": "Quels documents dois-je fournir pour déposer une candidature ?"}'
+```
+
+Réponse : `{"session_id": "demo-1", "blocks": [...]}`, avec deux types de blocs :
+- `{"type": "text", "text": "…"}` : texte affiché au prospect ;
+- `{"type": "formations", "items": [...]}` : cartes des formations (diplôme, spécialité, école, critères d'éligibilité, et le bloc `eligibility` quand les critères ont été vérifiés), au même format que l'API des formations.
+
+Les questions sur la procédure d'admission (étapes, pièces justificatives, dates limites, frais, conditions générales d'éligibilité) sont traitées à partir du document de procédure uniquement. Si l'information est absente ou incomplète, l'assistant le signale et oriente vers le service des admissions (`ADMISSIONS_CONTACT`). Si aucun modèle de langage ne répond, un message fixe oriente vers ce même contact.
+
+Les recherches de formations et les vérifications d'éligibilité utilisent le même code que l'API des formations : l'assistant affiche les formations dès qu'une demande le permet, puis vérifie les critères quand le prospect indique son niveau d'études, sa nationalité ou la nature de son baccalauréat, en ne demandant que les informations utiles. Les textes et les cartes sont produits par le code et transmis tels quels : le modèle de langage choisit l'action, il ne rédige jamais lui-même un résultat ni un statut d'éligibilité.
+
 ## 4. Frontend Angular
 
 *À venir.*
@@ -253,8 +279,10 @@ assistant-admission/
 │   ├── requirements.txt      # Dépendances Python
 │   ├── pytest.ini            # Configuration des tests
 │   ├── config/               # Réglages et adresses (URL) du projet
-│   ├── catalog/              # Formations : normalisation, import, recherche, API
-│   ├── data/                 # Fichier Excel des formations
+│   ├── catalog/              # Formations : normalisation, import, recherche, éligibilité, API
+│   ├── knowledge/            # Procédure d'admission : indexation (pgvector) et réponses (RAG)
+│   ├── chatbot/              # Assistant : modèles de langage, agent LangGraph, API /api/chat/
+│   ├── data/                 # Fichier Excel des formations et document de procédure
 │   └── tests/                # Tests automatisés
 └── frontend/                 # Application Angular (à venir)
 ```
