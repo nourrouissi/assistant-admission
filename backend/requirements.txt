@@ -10,6 +10,9 @@ pytest-django>=4.9            # Intégration de pytest avec Django (base de test
 # --- Assistant : LLM, orchestration et RAG ---
 langchain-openai==1.7.2       # Client LLM compatible OpenAI (Gemini, Groq)
 langgraph==1.2.16             # Orchestration du chatbot (agent et outils)
+langgraph-checkpoint-postgres==3.2.0  # Conversations enregistrées dans PostgreSQL
+psycopg-pool==3.3.3           # Connexions PostgreSQL partagées par la mémoire des conversations
 sentence-transformers==6.2.0  # Embeddings multilingual-e5 exécutés en local
 pgvector==0.5.1               # Type vecteur et distance cosinus pour Django
 python-docx==1.2.0            # Lecture du document de procédure (.docx)
+phonenumbers==9.0.41          # Validation des téléphones et format E.164

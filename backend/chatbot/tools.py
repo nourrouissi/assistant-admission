@@ -9,21 +9,26 @@ Chaque outil renvoie deux choses :
 Partie 1 : search_procedure.
 Partie 2 : search_formations (recherche) et check_eligibility (vérification), deux
 actions distinctes comme l'exige le sujet.
+Partie 3 : start_registration (identification de la formation à laquelle s'inscrire).
 """
 
 from __future__ import annotations
 
 import functools
 import threading
-from typing import Literal
+from typing import Annotated, Literal
 
 from django.db import connections
-from langchain_core.tools import tool
+from langchain_core.messages import ToolMessage
+from langchain_core.tools import InjectedToolCallId, tool
+from langgraph.types import Command
 
 from catalog.eligibility import Profile
 from catalog.serializers import MAX_EVALUATED, FormationSerializer
 from catalog.services import eligibility_cards, formations_by_ids, search_catalog
 from knowledge.rag import answer_procedure_question
+
+from .registration_flow import new_registration
 
 DiplomaCode = Literal["", "CAP", "BTP", "BTS", "LICENCE", "LICENCE_PRO", "BACHELOR", "INGENIEUR", "TITRE_RNCP", "SHORT_COURSE"]
 LevelCode = Literal["", "9EME", "2EME_SEC", "3EME_SEC", "4EME_SEC", "CAP", "BTP", "BAC", "BAC_PLUS_2", "LICENCE", "LICENCE_PLUS_1", "MASTER"]
@@ -168,4 +173,61 @@ def check_eligibility(
     return f"{text}\nFormations vérifiées :\n{_summary(cards)}", [_text_block(text), _cards_block(cards)]
 
 
-TOOLS = [search_procedure, search_formations, check_eligibility]
+# --- Partie 3 -----------------------------------------------------------------------------
+
+ASK_FORMATION = (
+    "À quelle formation souhaitez-vous vous inscrire ? Vous pouvez rechercher une formation, "
+    "puis cliquer sur « S'inscrire » sur sa carte."
+)
+CHOOSE_FORMATION = (
+    "Plusieurs formations correspondent à votre demande : cliquez sur « S'inscrire » "
+    "sur celle qui vous intéresse."
+)
+NO_FORMATION_TO_REGISTER = (
+    "Je n'ai trouvé aucune formation correspondant à votre demande : une demande d'inscription "
+    "n'est possible que pour une formation proposée. Vous pouvez rechercher une formation."
+)
+
+
+@tool
+@_closes_db_connection
+def start_registration(
+    tool_call_id: Annotated[str, InjectedToolCallId],
+    keywords: str = "",
+    diploma_type: DiplomaCode = "",
+    school: str = "",
+    formation_id: int | None = None,
+):
+    """Commence une demande d'inscription quand le candidat souhaite s'inscrire à une formation.
+    `formation_id` : identifiant d'une formation déjà affichée, si le candidat la désigne ; sinon
+    `keywords`, `diploma_type` et `school` comme pour search_formations.
+    Les coordonnées du candidat ne sont jamais demandées ici : l'étape d'inscription les demande ensuite."""
+    def answer(content: str, blocks: list[dict], update: dict | None = None) -> Command:
+        message = ToolMessage(content, artifact=blocks, tool_call_id=tool_call_id)
+        return Command(update={**(update or {}), "messages": [message]})
+
+    if formation_id:
+        formations, _unknown = formations_by_ids([formation_id])
+    elif keywords or diploma_type or school:
+        formations = list(search_catalog(query=keywords, school=school, diploma_type=diploma_type).formations[:MAX_EVALUATED])
+    else:
+        return answer(ASK_FORMATION, [_text_block(ASK_FORMATION)])
+
+    if not formations:
+        return answer(NO_FORMATION_TO_REGISTER, [_text_block(NO_FORMATION_TO_REGISTER)])
+    if len(formations) > 1:
+        # Choix ambigu : jamais de choix à la place du prospect
+        cards = FormationSerializer(formations, many=True).data
+        return answer(
+            f"{CHOOSE_FORMATION}\nFormations affichées :\n{_summary(cards)}",
+            [_text_block(CHOOSE_FORMATION), _cards_block(cards)],
+        )
+    formation = formations[0]
+    return answer(
+        f"Demande d'inscription commencée pour [id {formation.id}] : coordonnées demandées au candidat.",
+        [],
+        update={"registration": new_registration(formation.id)},
+    )
+
+
+TOOLS = [search_procedure, search_formations, check_eligibility, start_registration]

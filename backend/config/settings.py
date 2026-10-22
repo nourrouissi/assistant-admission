@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     # Applications du projet : ajoutées au fil des étapes
     "catalog",      # Formations : normalisation, import Excel, recherche, éligibilité
     "knowledge",    # Procédure d'admission : indexation et RAG
+    "registrations",  # Demandes d'inscription : validation, enregistrement, notification
     "chatbot",      # Assistant conversationnel : agent LangGraph et API /api/chat/
 ]
 
@@ -111,6 +112,8 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 REST_FRAMEWORK = {
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 20,
+    # Limite de requêtes de l'assistant, par adresse IP (format DRF : « 30/min », « 500/day »)
+    "DEFAULT_THROTTLE_RATES": {"chat": os.getenv("CHAT_RATE_LIMIT", "30/min")},
 }
 
 # --- CORS : autorise uniquement le frontend Angular ---------------------------------
@@ -143,3 +146,8 @@ LLM_FALLBACK_MODEL = os.getenv("LLM_FALLBACK_MODEL", "")
 EMBEDDINGS_PROVIDER = os.getenv("EMBEDDINGS_PROVIDER", "local")
 EMBEDDINGS_MODEL = os.getenv("EMBEDDINGS_MODEL", "")
 PROCEDURE_DOCUMENT = BASE_DIR / "data" / "procedure_admission.docx"
+
+# --- Assistant : mémoire des conversations ------------------------------------------------
+# « postgres » : conversations enregistrées dans PostgreSQL (survivent à un redémarrage) ;
+# « memory » : en mémoire vive (tests).
+CHAT_MEMORY = os.getenv("CHAT_MEMORY", "postgres")

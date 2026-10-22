@@ -4,7 +4,7 @@ Assistant conversationnel qui accompagne les prospects de l'information jusqu'à
 
 1. **Questions sur la procédure d'admission (RAG)** : étapes de la procédure, pièces justificatives à fournir, conditions générales d'éligibilité, dates limites et frais (uniquement s'ils figurent dans le document). Les réponses s'appuient exclusivement sur le document officiel ; si l'information est introuvable ou incomplète, l'assistant le signale et oriente vers le service des admissions.
 2. **Recherche de formations** : propositions issues de la base des formations selon le diplôme souhaité, la spécialité ou l'école, affichées dès que possible sous forme de cartes (diplôme, spécialité, école, critères d'éligibilité), puis affinées au fil de la conversation. L'assistant peut demander le niveau d'études, la nationalité ou la nature du baccalauréat pour vérifier les critères, mais ne confirme jamais une éligibilité sans les informations nécessaires.
-3. **Inscription conversationnelle** : collecte et validation du nom, du prénom, de l'e-mail et du téléphone ; choix d'une formation existante, avec demande de précision si plusieurs correspondent ; récapitulatif et enregistrement **uniquement après confirmation explicite**, avec le statut « Nouvelle » et sans doublon (e-mail ou téléphone) ; puis notification par e-mail à l'équipe des admissions et confirmation au prospect. L'admission n'est jamais garantie : la décision finale appartient à l'équipe des admissions.
+3. **Inscription conversationnelle** : l'assistant demande le nom, le prénom, l'e-mail et le téléphone au fil de la conversation (le modèle de langage les extrait des messages, le code les valide) ; choix d'une formation existante, avec demande de précision si plusieurs correspondent ; récapitulatif et enregistrement **uniquement après confirmation explicite**, avec le statut « Nouvelle » et sans doublon (même e-mail ou même téléphone) ; puis notification par e-mail à l'équipe des admissions et confirmation au prospect. L'admission n'est jamais garantie : la décision finale appartient à l'équipe des admissions.
 
 **Stack :** Django REST Framework · Angular · LangGraph · Gemini via API compatible OpenAI (secours : second modèle Gemini, puis Groq) · embeddings multilingual-e5 (exécutés en local) · PostgreSQL + pgvector · Docker
 
@@ -244,13 +244,51 @@ Extrait de la réponse :
 curl -X POST http://127.0.0.1:8000/api/chat/   -H "Content-Type: application/json"   -d '{"session_id": "demo-1", "message": "Quels documents dois-je fournir pour déposer une candidature ?"}'
 ```
 
-Réponse : `{"session_id": "demo-1", "blocks": [...]}`, avec deux types de blocs :
+Réponse : `{"session_id": "demo-1", "blocks": [...]}`, avec trois types de blocs :
 - `{"type": "text", "text": "…"}` : texte affiché au prospect ;
-- `{"type": "formations", "items": [...]}` : cartes des formations (diplôme, spécialité, école, critères d'éligibilité, et le bloc `eligibility` quand les critères ont été vérifiés), au même format que l'API des formations.
+- `{"type": "formations", "items": [...]}` : cartes des formations (diplôme, spécialité, école, critères d'éligibilité, et le bloc `eligibility` quand les critères ont été vérifiés), au même format que l'API des formations. Chaque carte est affichée avec un bouton « S'inscrire » ;
+- `{"type": "registration_summary", "formation": {...}, "applicant": {...}, "actions": ["confirm", "modify", "cancel"]}` : récapitulatif de la demande et ses trois boutons.
 
 Les questions sur la procédure d'admission (étapes, pièces justificatives, dates limites, frais, conditions générales d'éligibilité) sont traitées à partir du document de procédure uniquement. Si l'information est absente ou incomplète, l'assistant le signale et oriente vers le service des admissions (`ADMISSIONS_CONTACT`). Si aucun modèle de langage ne répond, un message fixe oriente vers ce même contact.
 
 Les recherches de formations et les vérifications d'éligibilité utilisent le même code que l'API des formations : l'assistant affiche les formations dès qu'une demande le permet, puis vérifie les critères quand le prospect indique son niveau d'études, sa nationalité ou la nature de son baccalauréat, en ne demandant que les informations utiles. Les textes et les cartes sont produits par le code et transmis tels quels : le modèle de langage choisit l'action, il ne rédige jamais lui-même un résultat ni un statut d'éligibilité.
+
+#### Demande d'inscription
+
+L'inscription commence quand le prospect écrit « je veux m'inscrire au BTS … » (si une seule formation correspond, l'inscription commence ; s'il y en a plusieurs, leurs cartes sont proposées pour qu'il choisisse ; si aucune ne correspond, rien n'est enregistré), ou quand il clique sur « S'inscrire » sur une carte. L'assistant lui demande alors ses coordonnées, qu'il donne par écrit, en un ou plusieurs messages :
+
+```text
+Assistant : Pour votre demande d'inscription à « Licence en Batiment » (Diplome de LICENCE, IMSET SOUSSE),
+            merci de m'indiquer votre nom, votre prénom, votre adresse e-mail et votre numéro de téléphone.
+Prospect  : Bonjour, je m'appelle Nour Rouissi
+Assistant : Merci de m'indiquer votre adresse e-mail et votre numéro de téléphone.
+Prospect  : mon mail c'est nour.rouissi@exemple.tn et mon tel 22 345 678
+Assistant : Voici le récapitulatif de votre demande d'inscription… [Confirmer] [Modifier] [Annuler]
+```
+
+Les boutons de l'interface envoient une `action` à la place de `message` (toujours avec le même `session_id`) :
+
+| Action | Corps JSON | Effet |
+|---|---|---|
+| `register` | `{"action": "register", "formation_id": 75}` | Bouton « S'inscrire » d'une carte : commence l'inscription à cette formation |
+| `confirm` / `modify` / `cancel` | `{"action": "confirm"}` | Boutons du récapitulatif (`cancel` est aussi possible pendant la collecte des coordonnées) |
+
+Répartition des rôles :
+- **le modèle de langage** comprend les messages : il extrait le nom, le prénom, l'e-mail et le téléphone, même donnés en plusieurs fois ou mêlés à une phrase, et reconnaît une demande d'annulation ou une question sans rapport (à laquelle l'agent répond avant que la collecte reprenne) ;
+- **le code** garantit les règles du sujet : chaque valeur extraite doit figurer dans le message du prospect (une valeur inventée par le modèle est ignorée), puis elle est validée par un formulaire Django ; l'assistant redemande ce qui manque ou ce qui est invalide.
+
+Règles appliquées par le code :
+- les numéros tunisiens (8 chiffres, avec ou sans +216) et internationaux sont acceptés et enregistrés au format E.164 ;
+- la demande n'est enregistrée qu'après le bouton « Confirmer » (un « oui » écrit ne suffit pas), avec le statut « Nouvelle » ;
+- une seule demande par e-mail et par téléphone, toutes formations confondues (contraintes d'unicité en base) ;
+- les messages contenant les coordonnées sont retirés de l'historique de la conversation : l'agent ne les voit jamais ;
+- une question posée pendant l'inscription reçoit sa réponse, puis la collecte ou le récapitulatif reprend sans perdre les informations déjà données ;
+- après l'enregistrement, un e-mail est envoyé à l'équipe métier (`BUSINESS_TEAM_EMAILS`), visible en développement dans Mailpit (http://localhost:8025) ; si l'envoi échoue, la demande reste enregistrée et l'erreur est journalisée ;
+- la confirmation se fait dans le chat et rappelle que la décision finale appartient à l'équipe des admissions.
+
+Conversations et limite de requêtes :
+- les conversations (et les inscriptions en cours) sont enregistrées dans PostgreSQL (`CHAT_MEMORY=postgres`, valeur par défaut) : elles survivent à un redémarrage du serveur. Les tables nécessaires sont créées automatiquement au premier message ;
+- le nombre de requêtes vers `/api/chat/` est limité par adresse IP (`CHAT_RATE_LIMIT`, 30 par minute par défaut) : au-delà, l'API répond `429`.
 
 ## 4. Frontend Angular
 
@@ -264,7 +302,7 @@ Depuis le dossier `backend`, avec l'infrastructure lancée :
 python -m pytest
 ```
 
-Les tests utilisent une base de données temporaire, créée puis supprimée automatiquement : les données réelles ne sont pas modifiées.
+Les tests utilisent une base de données temporaire, créée puis supprimée automatiquement : les données réelles ne sont pas modifiées. Les modèles de langage sont simulés : les tests ne font aucun appel réseau.
 
 ---
 
@@ -281,7 +319,8 @@ assistant-admission/
 │   ├── config/               # Réglages et adresses (URL) du projet
 │   ├── catalog/              # Formations : normalisation, import, recherche, éligibilité, API
 │   ├── knowledge/            # Procédure d'admission : indexation (pgvector) et réponses (RAG)
-│   ├── chatbot/              # Assistant : modèles de langage, agent LangGraph, API /api/chat/
+│   ├── registrations/        # Demandes d'inscription : validation, enregistrement, e-mail à l'équipe
+│   ├── chatbot/              # Assistant : modèles de langage, agent LangGraph, inscription, mémoire, API /api/chat/
 │   ├── data/                 # Fichier Excel des formations et document de procédure
 │   └── tests/                # Tests automatisés
 └── frontend/                 # Application Angular (à venir)
