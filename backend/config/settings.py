@@ -44,7 +44,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "corsheaders",
     # Applications du projet : ajoutées au fil des étapes
-    "catalog",
+    "catalog",      # Formations : normalisation, import Excel, recherche, éligibilité
 ]
 
 MIDDLEWARE = [
@@ -84,7 +84,7 @@ DATABASES = {
         "NAME": os.getenv("POSTGRES_DB", "admission"),
         "USER": os.getenv("POSTGRES_USER", "admission"),
         "PASSWORD": os.getenv("POSTGRES_PASSWORD", ""),
-        "HOST": os.getenv("POSTGRES_HOST", "localhost"),
+        "HOST": os.getenv("POSTGRES_HOST", "127.0.0.1"),
         "PORT": os.getenv("POSTGRES_PORT", "5432"),
     }
 }
@@ -116,10 +116,12 @@ CORS_ALLOWED_ORIGINS = env_list("CORS_ALLOWED_ORIGINS", "http://localhost:4200")
 
 # --- E-mails : Mailpit en développement, Brevo en démo et en production --------------
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = os.getenv("EMAIL_HOST", "localhost")
+EMAIL_HOST = os.getenv("EMAIL_HOST", "127.0.0.1")
 EMAIL_PORT = int(os.getenv("EMAIL_PORT", "1025"))
 EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
 EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", False)
-DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "admissions@imset.example")
-BUSINESS_TEAM_EMAILS = env_list("BUSINESS_TEAM_EMAILS", "equipe-admissions@imset.example")
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "admissions@example.test")
+BUSINESS_TEAM_EMAILS = env_list("BUSINESS_TEAM_EMAILS", "admissions@example.test")
+# Contact affiché quand l'assistant oriente vers le service des admissions
+ADMISSIONS_CONTACT = os.getenv("ADMISSIONS_CONTACT", "admissions@example.test")
