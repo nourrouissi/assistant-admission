@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "corsheaders",
     # Applications du projet : ajoutées au fil des étapes
+    "catalog",
 ]
 
 MIDDLEWARE = [
