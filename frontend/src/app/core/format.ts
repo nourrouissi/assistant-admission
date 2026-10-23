@@ -65,8 +65,12 @@ const DIPLOMA_SHORT: Record<string, string> = {
   SHORT_COURSE: 'COURT',
 };
 
+/** Sigles français remplacés en anglais (CAP, BTS… sont des sigles officiels, gardés dans toutes les langues). */
+const DIPLOMA_SHORT_EN: Record<string, string> = { INGENIEUR: 'ENG', SHORT_COURSE: 'SHORT' };
+
 /** Sigle du diplôme, affiché dans le sceau de la carte. */
-export function diplomaShort(card: FormationCard): string {
+export function diplomaShort(card: FormationCard, lang = 'fr'): string {
+  if (card.diploma_type && lang === 'en' && DIPLOMA_SHORT_EN[card.diploma_type]) return DIPLOMA_SHORT_EN[card.diploma_type];
   if (card.diploma_type) return DIPLOMA_SHORT[card.diploma_type] ?? card.diploma_type;
   return card.diploma.split(/\s+/).map((word) => word[0] ?? '').join('').slice(0, 4).toUpperCase();
 }

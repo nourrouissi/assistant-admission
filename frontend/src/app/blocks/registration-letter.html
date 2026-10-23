@@ -1,17 +1,17 @@
-<mat-card class="dossier" [class.closed]="!open()" aria-label="Récapitulatif de votre demande d'inscription">
+<mat-card class="dossier" [class.closed]="!open()" [attr.aria-label]="i18n.t(summaryLabel)">
   <header class="head">
     <span class="head-cap"><app-cap-mark [size]="30" /></span>
     <div>
-      <p class="eyebrow">Dossier de candidature</p>
-      <h3>Récapitulatif de votre demande</h3>
+      <p class="eyebrow">{{ i18n.t('Dossier de candidature') }}</p>
+      <h3>{{ i18n.t('Récapitulatif de votre demande') }}</h3>
     </div>
-    <span class="tab" aria-hidden="true">À vérifier</span>
+    <span class="tab" aria-hidden="true">{{ i18n.t('À vérifier') }}</span>
   </header>
   <div class="head-line" aria-hidden="true"></div>
 
   <mat-card-content>
     <section class="formation">
-      <p class="label">Formation demandée</p>
+      <p class="label">{{ i18n.t('Formation demandée') }}</p>
       <p class="specialty">{{ block().formation.specialty | tidy }}</p>
       <p class="meta">
         <span>{{ block().formation.diploma | tidy }}</span>
@@ -22,12 +22,12 @@
 
     <mat-divider />
 
-    <p class="label section">Candidat</p>
+    <p class="label section">{{ i18n.t('Candidat') }}</p>
     <dl class="applicant">
       @for (field of fields(); track field.label) {
         <div>
           <dt><mat-icon>{{ field.icon }}</mat-icon>{{ field.label }}</dt>
-          <dd>{{ field.value }}</dd>
+          <dd [attr.dir]="field.ltr ? 'ltr' : null">{{ field.value }}</dd>
         </div>
       }
     </dl>
@@ -37,23 +37,23 @@
     <mat-card-actions class="actions">
       <p class="note">
         <mat-icon>info</mat-icon>
-        Vérifiez vos informations : la demande n'est enregistrée qu'après votre confirmation.
+        {{ i18n.t("Vérifiez vos informations : la demande n'est enregistrée qu'après votre confirmation.") }}
       </p>
       <div class="buttons">
         <button mat-flat-button class="confirm" type="button" [disabled]="pending()" (click)="act.emit('confirm')">
           <mat-icon>verified</mat-icon>
-          Confirmer ma demande
+          {{ i18n.t('Confirmer ma demande') }}
         </button>
         <button mat-stroked-button class="modify" type="button" [disabled]="pending()" (click)="act.emit('modify')">
           <mat-icon>edit</mat-icon>
-          Modifier
+          {{ i18n.t('Modifier') }}
         </button>
         <button mat-button class="cancel" type="button" [disabled]="pending()" (click)="act.emit('cancel')">
-          Annuler
+          {{ i18n.t('Annuler') }}
         </button>
       </div>
     </mat-card-actions>
   } @else {
-    <p class="archived"><mat-icon>history</mat-icon>Ce récapitulatif n'est plus en attente.</p>
+    <p class="archived"><mat-icon>history</mat-icon>{{ i18n.t("Ce récapitulatif n'est plus en attente.") }}</p>
   }
 </mat-card>

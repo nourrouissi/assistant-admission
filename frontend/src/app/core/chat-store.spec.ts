@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 
 import { ChatApi } from './chat-api';
 import { ChatStore } from './chat-store';
+import { I18n } from './i18n';
 import { ChatRequest, ChatResponse, FormationCard } from './models';
 
 describe('ChatStore', () => {
@@ -86,5 +87,13 @@ describe('ChatStore', () => {
     expect(requests.length).toBe(1);
     release();
     await settle();
+  });
+
+  it('switches the interface to the language of the reply', async () => {
+    reply = async () => ({ session_id: 's-1', blocks: [{ type: 'text', text: 'مرحبا' }], registration: null, lang: 'ar' });
+    const store = createStore();
+    store.send('ما هي الوثائق المطلوبة؟');
+    await settle();
+    expect(TestBed.inject(I18n).lang()).toBe('ar');
   });
 });

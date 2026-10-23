@@ -24,6 +24,7 @@ from langchain_core.tools import InjectedToolCallId, tool
 from langgraph.types import Command
 
 from catalog.eligibility import Profile
+from config.i18n import DEFAULT_LANGUAGE, add_translations, current_language, join, tr
 from catalog.serializers import MAX_EVALUATED, FormationSerializer
 from catalog.services import eligibility_cards, formations_by_ids, search_catalog
 from knowledge.rag import answer_procedure_question
@@ -36,6 +37,15 @@ BacSectionCode = Literal["", "MATH", "SCIENCES_EXP", "TECHNIQUE", "INFORMATIQUE"
 
 ELIGIBILITY_OFFER = "Si vous souhaitez vérifier votre éligibilité, indiquez-moi : {items}."
 NO_FORMATION = "Je n'ai trouvé aucune formation correspondant à votre demande."
+UNMATCHED_TEXT = "Aucune formation ne correspond à {words}."
+UNMATCHED_GENERIC = "Une partie de votre demande ne correspond à aucune formation."  # anglais et arabe uniquement
+FOUND_TEXT = "Voici {count} formation{plural} correspondant à votre demande."
+NATIONALITY_NOT_UNDERSTOOD = "Je n'ai pas compris votre nationalité. Pouvez-vous l'indiquer en toutes lettres ?"
+CHECKED_TEXT = (
+    "Voici la vérification des critères d'après les informations que vous avez indiquées. "
+    "La décision finale revient à l'équipe des admissions."
+)
+NEEDED_TEXT = "Pour compléter la vérification, j'ai besoin de : {items}."
 
 
 def _closes_db_connection(func):
@@ -73,8 +83,12 @@ def _summary(cards: list[dict]) -> str:
 
 
 def _unmatched_sentence(unmatched: list[str]) -> str:
-    words = ", ".join(f"« {word} »" for word in unmatched)
-    return f"Aucune formation ne correspond à {words}."
+    # En anglais ou en arabe, les mots-clés sont passés en français (langue du catalogue) :
+    # ils ne sont pas cités au prospect, une phrase générale le prévient.
+    if current_language() != DEFAULT_LANGUAGE:
+        return tr(UNMATCHED_GENERIC)
+    words = join(f"« {word} »" for word in unmatched)
+    return tr(UNMATCHED_TEXT).format(words=words)
 
 
 # --- Partie 1 -----------------------------------------------------------------------------
@@ -110,16 +124,16 @@ def search_formations(keywords: str = "", diploma_type: DiplomaCode = "", school
     if result.unmatched_terms:
         sentences.append(_unmatched_sentence(result.unmatched_terms))
     if not cards:
-        sentences.append(NO_FORMATION)
+        sentences.append(tr(NO_FORMATION))
         text = " ".join(sentences)
         return text, [_text_block(text)]
 
     plural = "s" if len(cards) > 1 else ""
-    sentences.append(f"Voici {len(cards)} formation{plural} correspondant à votre demande.")
+    sentences.append(tr(FOUND_TEXT).format(count=len(cards), plural=plural))
     # Seules les informations utiles pour ces formations sont demandées
     _, needed = eligibility_cards(formations, Profile())
     if needed:
-        sentences.append(ELIGIBILITY_OFFER.format(items=", ".join(needed)))
+        sentences.append(tr(ELIGIBILITY_OFFER).format(items=join(needed)))
     text = " ".join(sentences)
     return f"{text}\nFormations affichées :\n{_summary(cards)}", [_text_block(text), _cards_block(cards)]
 
@@ -146,7 +160,7 @@ def check_eligibility(
     try:
         profile = Profile(level=level or None, nationality=nationality or None, bac_section=bac_section or None)
     except ValueError:
-        text = "Je n'ai pas compris votre nationalité. Pouvez-vous l'indiquer en toutes lettres ?"
+        text = tr(NATIONALITY_NOT_UNDERSTOOD)
         return text, [_text_block(text)]
 
     sentences = []
@@ -158,17 +172,14 @@ def check_eligibility(
         if result.unmatched_terms:
             sentences.append(_unmatched_sentence(result.unmatched_terms))
     if not formations:
-        sentences.append(NO_FORMATION)
+        sentences.append(tr(NO_FORMATION))
         text = " ".join(sentences)
         return text, [_text_block(text)]
 
     cards, needed = eligibility_cards(formations, profile)
-    sentences.append(
-        "Voici la vérification des critères d'après les informations que vous avez indiquées. "
-        "La décision finale revient à l'équipe des admissions."
-    )
+    sentences.append(tr(CHECKED_TEXT))
     if needed:
-        sentences.append(f"Pour compléter la vérification, j'ai besoin de : {', '.join(needed)}.")
+        sentences.append(tr(NEEDED_TEXT).format(items=join(needed)))
     text = " ".join(sentences)
     return f"{text}\nFormations vérifiées :\n{_summary(cards)}", [_text_block(text), _cards_block(cards)]
 
@@ -211,16 +222,16 @@ def start_registration(
     elif keywords or diploma_type or school:
         formations = list(search_catalog(query=keywords, school=school, diploma_type=diploma_type).formations[:MAX_EVALUATED])
     else:
-        return answer(ASK_FORMATION, [_text_block(ASK_FORMATION)])
+        return answer(tr(ASK_FORMATION), [_text_block(tr(ASK_FORMATION))])
 
     if not formations:
-        return answer(NO_FORMATION_TO_REGISTER, [_text_block(NO_FORMATION_TO_REGISTER)])
+        return answer(tr(NO_FORMATION_TO_REGISTER), [_text_block(tr(NO_FORMATION_TO_REGISTER))])
     if len(formations) > 1:
         # Choix ambigu : jamais de choix à la place du prospect
         cards = FormationSerializer(formations, many=True).data
         return answer(
             f"{CHOOSE_FORMATION}\nFormations affichées :\n{_summary(cards)}",
-            [_text_block(CHOOSE_FORMATION), _cards_block(cards)],
+            [_text_block(tr(CHOOSE_FORMATION)), _cards_block(cards)],
         )
     formation = formations[0]
     return answer(
@@ -228,6 +239,59 @@ def start_registration(
         [],
         update={"registration": new_registration(formation.id)},
     )
+
+
+# --- Traductions (le texte français ci-dessus reste la référence) -------------------------------
+
+add_translations({
+    ELIGIBILITY_OFFER: {
+        "en": "If you would like to check your eligibility, please tell me: {items}.",
+        "ar": "إذا كنت ترغب في التحقق من أهليتك، يُرجى إخباري بما يلي: {items}.",
+    },
+    NO_FORMATION: {
+        "en": "I could not find any program matching your request.",
+        "ar": "لم أجد أي برنامج يطابق طلبك.",
+    },
+    UNMATCHED_GENERIC: {
+        "en": "Part of your request does not match any program.",
+        "ar": "جزء من طلبك لا يطابق أي برنامج.",
+    },
+    UNMATCHED_TEXT: {
+        "en": "No program matches {words}.",
+        "ar": "لا يوجد أي برنامج يطابق {words}.",
+    },
+    FOUND_TEXT: {
+        "en": "Here are the programs matching your request ({count}).",
+        "ar": "إليك البرامج المطابقة لطلبك ({count}).",
+    },
+    NATIONALITY_NOT_UNDERSTOOD: {
+        "en": "I did not understand your nationality. Could you write it out in full?",
+        "ar": "لم أفهم جنسيتك. هل يمكنك كتابتها كاملة؟",
+    },
+    CHECKED_TEXT: {
+        "en": "Here is the check of the criteria based on the information you provided. "
+              "The final decision rests with the admissions team.",
+        "ar": "إليك التحقق من الشروط بناءً على المعلومات التي قدمتها. القرار النهائي يعود إلى فريق القبول.",
+    },
+    NEEDED_TEXT: {
+        "en": "To complete the check, I need: {items}.",
+        "ar": "لإكمال التحقق، أحتاج إلى: {items}.",
+    },
+    ASK_FORMATION: {
+        "en": "Which program would you like to apply for? You can search for a program, "
+              "then click “Apply” on its card.",
+        "ar": "في أي برنامج ترغب في التسجيل؟ يمكنك البحث عن برنامج ثم النقر على «سجّل» في بطاقته.",
+    },
+    CHOOSE_FORMATION: {
+        "en": "Several programs match your request: click “Apply” on the one you are interested in.",
+        "ar": "هناك عدة برامج تطابق طلبك: انقر على «سجّل» في البرنامج الذي يهمك.",
+    },
+    NO_FORMATION_TO_REGISTER: {
+        "en": "I could not find any program matching your request: an application is only possible "
+              "for a program we offer. You can search for a program.",
+        "ar": "لم أجد أي برنامج يطابق طلبك: لا يمكن تقديم طلب تسجيل إلا لبرنامج نقدمه. يمكنك البحث عن برنامج.",
+    },
+})
 
 
 TOOLS = [search_procedure, search_formations, check_eligibility, start_registration]

@@ -21,28 +21,25 @@
   </div>
 
   <div class="hero-content">
-    <p class="overline"><span></span>Assistant d'admission<span></span></p>
-    <h1>Votre cap vers le <em>diplôme</em></h1>
-    <p class="lead">
-      Procédure d'admission, choix de la formation, vérification de votre profil et demande d'inscription :
-      je vous accompagne à chaque étape, jusqu'au jour de votre remise de diplôme.
-    </p>
+    <p class="overline"><span></span>{{ i18n.t("Assistant d'admission") }}<span></span></p>
+    <h1>{{ i18n.t('Votre cap vers le') }} <em>{{ i18n.t('diplôme') }}</em></h1>
+    <p class="lead">{{ i18n.t(lead) }}</p>
   </div>
 </section>
 
 <div class="doors">
   @for (door of doors; track door.title; let index = $index) {
     <mat-card appearance="outlined" class="door" [style.animation-delay.ms]="250 + index * 120"
-              role="button" tabindex="0" (click)="pick.emit(door.prompt)"
-              (keydown.enter)="pick.emit(door.prompt)" (keydown.space)="$event.preventDefault(); pick.emit(door.prompt)">
+              role="button" tabindex="0" (click)="pick.emit(i18n.t(door.prompt))"
+              (keydown.enter)="pick.emit(i18n.t(door.prompt))" (keydown.space)="$event.preventDefault(); pick.emit(i18n.t(door.prompt))">
       <mat-card-header>
         <span mat-card-avatar class="door-icon"><mat-icon>{{ door.icon }}</mat-icon></span>
-        <mat-card-subtitle class="door-step">{{ door.step }}</mat-card-subtitle>
-        <mat-card-title class="door-title">{{ door.title }}</mat-card-title>
+        <mat-card-subtitle class="door-step">{{ i18n.t(door.step) }}</mat-card-subtitle>
+        <mat-card-title class="door-title">{{ i18n.t(door.title) }}</mat-card-title>
       </mat-card-header>
       <mat-card-content>
-        <p class="door-text">{{ door.text }}</p>
-        <p class="door-prompt">« {{ door.prompt }} »</p>
+        <p class="door-text">{{ i18n.t(door.text) }}</p>
+        <p class="door-prompt">{{ i18n.quote(i18n.t(door.prompt)) }}</p>
       </mat-card-content>
       <span class="door-arrow" aria-hidden="true"><mat-icon>arrow_forward</mat-icon></span>
     </mat-card>
@@ -50,8 +47,8 @@
 </div>
 
 <div class="examples">
-  <span class="label">Essayez aussi</span>
+  <span class="label">{{ i18n.t('Essayez aussi') }}</span>
   @for (example of examples; track example) {
-    <button mat-stroked-button type="button" class="example" (click)="pick.emit(example)">{{ example }}</button>
+    <button mat-stroked-button type="button" class="example" (click)="pick.emit(i18n.t(example))">{{ i18n.t(example) }}</button>
   }
 </div>

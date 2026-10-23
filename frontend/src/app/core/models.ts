@@ -61,12 +61,16 @@ export interface ChatRequest {
   message?: string;
   action?: ChatAction;
   formation_id?: number;
+  /** Langue de la réponse : absente = français. */
+  lang?: 'en' | 'ar';
 }
 
 export interface ChatResponse {
   session_id: string;
   blocks: Block[];
   registration: RegistrationStage;
+  /** Langue de la réponse (celle du message du prospect) ; absente pour une conversation en français. */
+  lang?: 'fr' | 'en' | 'ar';
 }
 
 /** Une entrée du fil de conversation. `action` : message produit par un bouton. */

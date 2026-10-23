@@ -1,10 +1,11 @@
-import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatIconModule } from '@angular/material/icon';
 
 import { ELIGIBILITY_LABELS, criterion, diplomaShort } from '../core/format';
+import { I18n } from '../core/i18n';
 import { FormationCard as Card } from '../core/models';
 import { TidyPipe } from '../core/tidy.pipe';
 
@@ -24,13 +25,17 @@ export class FormationCard {
   readonly disabled = input(false);
   readonly register = output<Card>();
 
-  protected readonly short = computed(() => diplomaShort(this.card()));
+  protected readonly i18n = inject(I18n);
+
+  protected readonly short = computed(() => diplomaShort(this.card(), this.i18n.lang()));
   protected readonly criteria = computed(() => {
     const { level, nationality, bac } = this.card().criteria;
+    const t = (text: string) => this.i18n.t(text);
     return [
-      { icon: 'school', label: 'Niveau', value: criterion(level, 'Tous niveaux') },
-      { icon: 'public', label: 'Nationalité', value: criterion(nationality, 'Toutes nationalités') },
-      { icon: 'workspace_premium', label: 'Bac', value: criterion(bac, 'Toutes sections') },
+      // Critères officiels de l'école cités tels quels ; seuls « All » et les libellés sont traduits
+      { icon: 'school', label: t('Niveau'), value: t(criterion(level, 'Tous niveaux')) },
+      { icon: 'public', label: t('Nationalité'), value: t(criterion(nationality, 'Toutes nationalités')) },
+      { icon: 'workspace_premium', label: t('Bac'), value: t(criterion(bac, 'Toutes sections')) },
     ];
   });
   protected readonly verdict = computed(() => {

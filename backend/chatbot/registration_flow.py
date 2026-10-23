@@ -25,6 +25,7 @@ import re
 from typing import Literal
 
 from django.conf import settings
+from django.utils import translation
 from langchain_core.messages import AIMessage, HumanMessage, RemoveMessage, SystemMessage
 from langchain_core.runnables import Runnable
 from langgraph.graph import END
@@ -34,6 +35,7 @@ from pydantic import BaseModel, Field
 from catalog.models import Formation
 from catalog.normalization import fold
 from catalog.serializers import FormationSerializer
+from config.i18n import add_translations, current_language, tr
 from registrations.forms import ApplicantForm
 from registrations.services import DuplicateApplication, FormationUnavailable, submit_application
 
@@ -55,6 +57,8 @@ SUMMARY_ACTIONS = ["confirm", "modify", "cancel"]
 START_TEXT = "Pour votre demande d'inscription à « {specialty} » ({diploma}, {school}), merci de m'indiquer {fields}."
 MISSING_TEXT = "Merci de m'indiquer {fields}."
 ERROR_TEXT = "{field} n'est pas valide : {message}"
+AND = " et "      # dernier élément d'une énumération
+COMMA = ", "      # virgule d'une énumération (virgule arabe en arabe)
 MODIFY_TEXT = "Quelle information souhaitez-vous modifier ? Écrivez simplement la nouvelle valeur."
 SUMMARY_TEXT = (
     "Voici le récapitulatif de votre demande d'inscription. "
@@ -155,9 +159,21 @@ def validate(values: dict) -> tuple[dict | None, dict]:
     Retour : (coordonnées nettoyées si tout est valide, erreurs des champs renseignés).
     Les doublons sont vérifiés seulement à la confirmation (submit_application).
     """
-    form = ApplicantForm({field: values.get(field, "") for field in FIELDS})
-    valid = form.is_valid()
-    errors = {field: list(messages) for field, messages in form.errors.items() if values.get(field)}
+    language = current_language()
+    if language == "fr":
+        form = ApplicantForm({field: values.get(field, "") for field in FIELDS})
+        valid = form.is_valid()
+        errors = {field: list(messages) for field, messages in form.errors.items() if values.get(field)}
+        return (form.cleaned_data if valid else None), errors
+
+    # Autre langue : messages de Django dans cette langue, messages propres au projet traduits
+    with translation.override(language):
+        form = ApplicantForm({field: values.get(field, "") for field in FIELDS})
+        valid = form.is_valid()
+        errors = {
+            field: [tr(str(message)) for message in messages]
+            for field, messages in form.errors.items() if values.get(field)
+        }
     return (form.cleaned_data if valid else None), errors
 
 
@@ -197,8 +213,8 @@ def _end(text: str, outcome: str, **details) -> Command:
 
 
 def _enumerate(fields: list[str]) -> str:
-    names = [FIELD_NAMES[field] for field in fields]
-    return names[0] if len(names) == 1 else f"{', '.join(names[:-1])} et {names[-1]}"
+    names = [tr(FIELD_NAMES[field]) for field in fields]
+    return names[0] if len(names) == 1 else f"{tr(COMMA).join(names[:-1])}{tr(AND)}{names[-1]}"
 
 
 def _question(registration: dict, card: dict) -> str:
@@ -206,24 +222,24 @@ def _question(registration: dict, card: dict) -> str:
     values, errors = registration["values"], registration["errors"]
     missing = [field for field in FIELDS if not values.get(field)]
     if not values:
-        return START_TEXT.format(
+        return tr(START_TEXT).format(
             specialty=card["specialty"], diploma=card["diploma"], school=card["school"], fields=_enumerate(FIELDS),
         )
     sentences = [
-        ERROR_TEXT.format(field=FIELD_NAMES[field].capitalize(), message=" ".join(messages))
+        tr(ERROR_TEXT).format(field=tr(FIELD_NAMES[field]).capitalize(), message=" ".join(messages))
         for field, messages in errors.items()
     ]
     to_ask = missing + [field for field in errors if field not in missing]
     if to_ask:
-        sentences.append(MISSING_TEXT.format(fields=_enumerate([f for f in FIELDS if f in to_ask])))
+        sentences.append(tr(MISSING_TEXT).format(fields=_enumerate([f for f in FIELDS if f in to_ask])))
     else:
-        sentences.append(MODIFY_TEXT)       # tout est valide : le prospect a demandé une modification
+        sentences.append(tr(MODIFY_TEXT))       # tout est valide : le prospect a demandé une modification
     return " ".join(sentences)
 
 
 def _summary_blocks(registration: dict, card: dict) -> list[dict]:
     return [
-        _text_block(SUMMARY_TEXT),
+        _text_block(tr(SUMMARY_TEXT)),
         {
             "type": "registration_summary",
             "formation": card,
@@ -240,7 +256,7 @@ def registration_ask(state: dict) -> Command:
     registration = state["registration"]
     card = _card(registration["formation_id"])
     if card is None:
-        return _end(UNAVAILABLE_TEXT, UNAVAILABLE)
+        return _end(tr(UNAVAILABLE_TEXT), UNAVAILABLE)
     return Command(update={"messages": [_say(_question(registration, card))]}, goto=END)
 
 
@@ -252,7 +268,7 @@ def registration_collect(state: dict) -> Command:
     registration = state["registration"]
     formation_id = registration["formation_id"]
     if _card(formation_id) is None:
-        return _end(UNAVAILABLE_TEXT, UNAVAILABLE)
+        return _end(tr(UNAVAILABLE_TEXT), UNAVAILABLE)
 
     message = state["messages"][-1]
     question = next(
@@ -263,12 +279,12 @@ def registration_collect(state: dict) -> Command:
     except Exception:
         logger.exception("Inscription : aucun modèle n'a pu analyser le message")
         return Command(
-            update={"messages": [_say(EXTRACTION_FAILED_TEXT.format(contact=settings.ADMISSIONS_CONTACT))]},
+            update={"messages": [_say(tr(EXTRACTION_FAILED_TEXT).format(contact=settings.ADMISSIONS_CONTACT))]},
             goto=END,
         )
 
     if extracted.intent == "cancel":
-        return _end(CANCELLED_TEXT, CANCELLED)
+        return _end(tr(CANCELLED_TEXT), CANCELLED)
     given = {field: getattr(extracted, field) for field in FIELDS if getattr(extracted, field)}
     if extracted.intent == "other" and not given:
         return Command(goto="agent")
@@ -296,29 +312,81 @@ def registration_summary(state: dict) -> Command:
     registration = state["registration"]
     card = _card(registration["formation_id"])
     if card is None:
-        return _end(UNAVAILABLE_TEXT, UNAVAILABLE)
+        return _end(tr(UNAVAILABLE_TEXT), UNAVAILABLE)
 
     answer = interrupt({"stage": "summary", "blocks": _summary_blocks(registration, card)})
     action = answer.get("action")
     if action == "modify":
         return Command(update={"registration": {**registration, "stage": "collect"}}, goto="registration_ask")
     if action != "confirm":
-        return _end(CANCELLED_TEXT, CANCELLED)
+        return _end(tr(CANCELLED_TEXT), CANCELLED)
 
     # Confirmation explicite par le bouton : seul chemin qui enregistre une demande.
     # Les doublons sont vérifiés ici seulement, jamais pendant la collecte.
     try:
         application = submit_application(registration["values"], registration["formation_id"])
     except DuplicateApplication:
-        return _end(DUPLICATE_TEXT.format(contact=settings.ADMISSIONS_CONTACT), DUPLICATE)
+        return _end(tr(DUPLICATE_TEXT).format(contact=settings.ADMISSIONS_CONTACT), DUPLICATE)
     except FormationUnavailable:
-        return _end(UNAVAILABLE_TEXT, UNAVAILABLE)
+        return _end(tr(UNAVAILABLE_TEXT), UNAVAILABLE)
     return _end(
-        CONFIRMED_TEXT.format(specialty=card["specialty"], school=card["school"]),
+        tr(CONFIRMED_TEXT).format(specialty=card["specialty"], school=card["school"]),
         CREATED, status=application.get_status_display(), formation=card,
     )
 
 
 def registration_cancel(state: dict) -> Command:
     """Bouton « Annuler » pendant la collecte."""
-    return _end(CANCELLED_TEXT, CANCELLED)
+    return _end(tr(CANCELLED_TEXT), CANCELLED)
+
+
+# --- Traductions (le texte français ci-dessus reste la référence) -------------------------------
+
+add_translations({
+    FIELD_NAMES["last_name"]: {"en": "your last name", "ar": "اسم العائلة"},
+    FIELD_NAMES["first_name"]: {"en": "your first name", "ar": "الاسم الأول"},
+    FIELD_NAMES["email"]: {"en": "your email address", "ar": "بريدك الإلكتروني"},
+    FIELD_NAMES["phone"]: {"en": "your phone number", "ar": "رقم هاتفك"},
+    AND: {"en": " and ", "ar": " و"},
+    COMMA: {"en": ", ", "ar": "، "},
+    START_TEXT: {
+        "en": "For your application to “{specialty}” ({diploma}, {school}), please give me {fields}.",
+        "ar": "لطلب التسجيل في «{specialty}» ({diploma}، {school})، يُرجى ذكر {fields}.",
+    },
+    MISSING_TEXT: {"en": "Please give me {fields}.", "ar": "يُرجى ذكر {fields}."},
+    ERROR_TEXT: {"en": "{field} is not valid: {message}", "ar": "{field} غير صالح: {message}"},
+    MODIFY_TEXT: {
+        "en": "Which information would you like to change? Simply write the new value.",
+        "ar": "ما المعلومة التي ترغب في تعديلها؟ اكتب القيمة الجديدة فقط.",
+    },
+    SUMMARY_TEXT: {
+        "en": "Here is the summary of your application. Check your details, then confirm, edit "
+              "or cancel your application using the buttons.",
+        "ar": "إليك ملخص طلب التسجيل. تحقق من معلوماتك، ثم أكّد طلبك أو عدّله أو ألغِه باستخدام الأزرار.",
+    },
+    CONFIRMED_TEXT: {
+        "en": "Your application to “{specialty}” ({school}) has been received, with the status “New”. "
+              "The admissions team will review it: the final decision rests with them.",
+        "ar": "تم تسجيل طلبك في «{specialty}» ({school}) بنجاح، بالحالة «جديد». "
+              "سيدرسه فريق القبول، والقرار النهائي يعود إليه.",
+    },
+    CANCELLED_TEXT: {
+        "en": "Your application has been cancelled: no information has been saved.",
+        "ar": "تم إلغاء طلب التسجيل: لم يتم حفظ أي معلومات.",
+    },
+    DUPLICATE_TEXT: {
+        "en": "An application already exists with this email address or phone number: no new application "
+              "has been saved. For any question, you can contact the admissions office: {contact}.",
+        "ar": "يوجد طلب مسجّل مسبقًا بهذا البريد الإلكتروني أو رقم الهاتف: لم يتم تسجيل أي طلب جديد. "
+              "لأي استفسار، يمكنك التواصل مع مصلحة القبول: {contact}.",
+    },
+    UNAVAILABLE_TEXT: {
+        "en": "This program is no longer offered: no application has been saved. You can search for another program.",
+        "ar": "لم يعد هذا البرنامج متاحًا: لم يتم تسجيل أي طلب. يمكنك البحث عن برنامج آخر.",
+    },
+    EXTRACTION_FAILED_TEXT: {
+        "en": "I could not process your message for the moment. You can try again, "
+              "or contact the admissions office: {contact}.",
+        "ar": "تعذّر عليّ معالجة رسالتك حاليًا. يمكنك المحاولة مرة أخرى أو التواصل مع مصلحة القبول: {contact}.",
+    },
+})

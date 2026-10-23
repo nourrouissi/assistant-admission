@@ -1,8 +1,9 @@
-import { ChangeDetectionStrategy, Component, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, output } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 
+import { I18n } from '../core/i18n';
 import { CapMark } from '../shared/cap-mark';
 
 /**
@@ -18,6 +19,12 @@ import { CapMark } from '../shared/cap-mark';
 })
 export class Welcome {
   readonly pick = output<string>();
+
+  protected readonly i18n = inject(I18n);
+
+  protected readonly lead =
+    "Procédure d'admission, choix de la formation, vérification de votre profil et demande d'inscription : " +
+    "je vous accompagne à chaque étape, jusqu'au jour de votre remise de diplôme.";
 
   protected readonly doors = [
     {

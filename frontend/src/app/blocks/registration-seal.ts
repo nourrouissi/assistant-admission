@@ -1,7 +1,8 @@
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 
+import { I18n } from '../core/i18n';
 import { ResultBlock } from '../core/models';
 import { TidyPipe } from '../core/tidy.pipe';
 import { CapMark } from '../shared/cap-mark';
@@ -25,6 +26,9 @@ const OTHER_OUTCOMES = {
 })
 export class RegistrationSeal {
   readonly block = input.required<ResultBlock>();
+
+  protected readonly i18n = inject(I18n);
+  protected readonly sentLabel = "Demande d'inscription transmise";
 
   protected readonly other = computed(() => {
     const outcome = this.block().outcome;

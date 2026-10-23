@@ -342,14 +342,15 @@ def bac_rule_understood(raw: str) -> bool:
 # ---------------------------------------------------------------------------
 
 # Formes reconnues de la nationalité tunisienne (texte plié) : nationalité,
-# pays, anglais, codes ISO à 2 et 3 lettres.
+# pays, anglais, arabe, codes ISO à 2 et 3 lettres.
 _TUNISIAN = {
     "tunisienne", "tunisien", "tunisiennes", "tunisiens",
     "tunisie", "tunisia", "tunisian", "tunisians", "tn", "tun",
+    "تونسية", "تونسي", "تونسيه", "تونس", "التونسية", "التونسي",
 }
 
-# Une nationalité déclarée : des lettres (espaces, tirets, apostrophes admis), 2 à 40 caractères.
-_NATIONALITY_SHAPE = re.compile(r"[a-z][a-z' -]{1,39}")
+# Une nationalité déclarée : des lettres latines ou arabes (espaces, tirets, apostrophes admis), 2 à 40 caractères.
+_NATIONALITY_SHAPE = re.compile(r"[a-z\u0621-\u064a][a-z\u0621-\u064a' -]{1,39}")
 
 # Séparateurs d'une double nationalité déclarée : « et », virgule, barre oblique.
 _DUAL_NATIONALITY_SEPARATOR = re.compile(r"\s*(?:,|/|\bet\b)\s*")

@@ -13,8 +13,20 @@ import re
 import phonenumbers
 from django import forms
 
+from config.i18n import add_translations
+
 # Lettres (accents compris), séparées par un espace, un tiret ou une apostrophe
 NAME_PATTERN = re.compile(r"^[^\W\d_]+(?:[ '’-][^\W\d_]+)*$")
+
+NAME_ERROR = "Lettres uniquement (espaces, tirets et apostrophes acceptés)."
+PHONE_ERROR = "Numéro de téléphone invalide."
+
+# Traductions (affichées par l'assistant en anglais ou en arabe)
+add_translations({
+    NAME_ERROR: {"en": "Letters only (spaces, hyphens and apostrophes allowed).",
+                 "ar": "حروف فقط (يُسمح بالمسافات والشرطات والفواصل العليا)."},
+    PHONE_ERROR: {"en": "Invalid phone number.", "ar": "رقم هاتف غير صالح."},
+})
 
 
 class ApplicantForm(forms.Form):
@@ -26,7 +38,7 @@ class ApplicantForm(forms.Form):
     def _clean_name(self, field: str) -> str:
         value = " ".join(self.cleaned_data[field].split())
         if not NAME_PATTERN.fullmatch(value):
-            raise forms.ValidationError("Lettres uniquement (espaces, tirets et apostrophes acceptés).")
+            raise forms.ValidationError(NAME_ERROR)
         return value
 
     def clean_last_name(self) -> str:
@@ -45,5 +57,5 @@ class ApplicantForm(forms.Form):
         except phonenumbers.NumberParseException:
             number = None
         if number is None or not phonenumbers.is_valid_number(number):
-            raise forms.ValidationError("Numéro de téléphone invalide.")
+            raise forms.ValidationError(PHONE_ERROR)
         return phonenumbers.format_number(number, phonenumbers.PhoneNumberFormat.E164)

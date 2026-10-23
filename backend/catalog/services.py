@@ -19,6 +19,8 @@ from operator import and_
 
 from django.db.models import Q, QuerySet
 
+from config.i18n import DEFAULT_LANGUAGE, current_language, translation
+
 from .models import Formation
 from .normalization import fold
 
@@ -34,7 +36,9 @@ def _keywords(query: str) -> list[str]:
     courts ni les doublons.
     """
     keywords: list[str] = []
-    for word in re.findall(r"[a-z0-9]+", fold(query)):
+    # En arabe, les mots arabes comptent aussi (comparés aux noms traduits, voir _in_translation)
+    letters = "a-z0-9" if current_language() == DEFAULT_LANGUAGE else "a-z0-9\u0621-\u064a"
+    for word in re.findall(rf"[{letters}]+", fold(query)):
         if len(word) >= MIN_WORD_LENGTH and word not in keywords:
             keywords.append(word)
     return keywords
@@ -50,6 +54,49 @@ def _starts_a_word(term: str) -> Q:
     (le texte de recherche est déjà plié, sans accents).
     """
     return Q(search_text__regex=rf"(^|[^a-z0-9]){re.escape(term)}")
+
+
+def _in_translation(term: str) -> Q:
+    """
+    En anglais ou en arabe : « un mot du nom traduit (diplôme ou spécialité) commence par `term` ».
+    Le prospect peut reprendre le nom affiché sur sa carte (« building », « البناء »). Les noms anglais
+    sont aussi comparés en arabe : le modèle passe souvent par l'anglais (« تطوير الويب » -> « web »).
+    En français, aucune formation : la recherche d'origine reste seule, à l'identique.
+    """
+    if current_language() == DEFAULT_LANGUAGE:
+        return Q(pk__in=[])
+    pattern = re.compile(rf"(^|[^a-z0-9\u0621-\u064a]){re.escape(term)}")
+    languages = {current_language(), "en"}
+    ids = [
+        pk for pk, diploma, specialty in Formation.objects.filter(is_active=True).values_list("pk", "diploma_label", "specialty")
+        if any(pattern.search(fold(f"{translation(diploma, lang)} {translation(specialty, lang)}")) for lang in languages)
+    ]
+    return Q(pk__in=ids)
+
+
+# En anglais, « bachelor » désigne aussi la Licence (« Bachelor's degree ») : en anglais et en arabe,
+# le type BACHELOR couvre les deux. En français, chaque type reste seul, à l'identique.
+_BACHELOR_IN_ENGLISH = ["BACHELOR", "LICENCE", "LICENCE_PRO"]
+
+
+def _diploma_types(code: str) -> list[str]:
+    if code == "BACHELOR" and current_language() != DEFAULT_LANGUAGE:
+        return _BACHELOR_IN_ENGLISH
+    return [code]
+
+
+def _city_in_french(school: str) -> str:
+    """En arabe : « سوسة » (ou « سوسه ») -> « Sousse ». Tout autre texte est rendu tel quel."""
+    from .translations import CITIES_AR
+
+    def plain(text: str) -> str:
+        return text.strip().replace("ة", "ه")
+
+    return next((city for arabic, city in CITIES_AR.items() if plain(arabic) in plain(school)), school)
+
+
+def _matches(term: str) -> Q:
+    return _starts_a_word(term) | _in_translation(term)
 
 
 @dataclass
@@ -83,11 +130,13 @@ def search_catalog(query: str = "", school: str = "", diploma_type: str = "") ->
     """
     queryset = Formation.objects.filter(is_active=True)
 
+    if school and current_language() != DEFAULT_LANGUAGE:
+        school = _city_in_french(school)
     if school:
         school_folded = fold(school)
         queryset = queryset.filter(Q(school__icontains=school_folded) | Q(city__iexact=school_folded))
     if diploma_type:
-        queryset = queryset.filter(diploma_type=diploma_type.upper())
+        queryset = queryset.filter(diploma_type__in=_diploma_types(diploma_type.upper()))
 
     keywords = _keywords(query)
     if not keywords:
@@ -95,8 +144,8 @@ def search_catalog(query: str = "", school: str = "", diploma_type: str = "") ->
 
     # Mots absents de tout le catalogue actif : retirés et signalés
     catalog = Formation.objects.filter(is_active=True)
-    unmatched = [word for word in keywords if not catalog.filter(_starts_a_word(word)).exists()]
-    filters = [_starts_a_word(word) for word in keywords if word not in unmatched]
+    unmatched = [word for word in keywords if not catalog.filter(_matches(word)).exists()]
+    filters = [_matches(word) for word in keywords if word not in unmatched]
     if not filters:
         return SearchResult(queryset.none(), unmatched)
 

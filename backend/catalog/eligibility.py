@@ -13,6 +13,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from config.i18n import SEMICOLON, add_translations, join, tr
+
 from .models import Formation
 from .normalization import BacRule, BacSection, Level, is_all, normalize_nationality
 
@@ -61,6 +63,28 @@ MISSING_LEVEL = "niveau d'études"
 MISSING_NATIONALITY = "nationalité"
 MISSING_BAC_SECTION = "section du bac (ou du secondaire)"
 
+# Motifs et messages affichés (texte français de référence)
+TO_CONFIRM = "{criterion} à confirmer par l'équipe des admissions (critère officiel : « {official} »)"
+CRITERION_LEVEL = "niveau"
+CRITERION_NATIONALITY = "nationalité"
+CRITERION_BAC = "nature du bac"
+SAME_SECTOR = (
+    "accès possible avec votre diplôme professionnel, sous réserve que "
+    "l'équipe des admissions confirme qu'il relève du même secteur"
+)
+LEVEL_REQUIRED = "niveau requis : {official}"
+NATIONALITY_REQUIRED = "nationalité requise : {official}"
+SECTION_REQUIRED = "section requise : {official}"
+SEEMS_NOT_MET = "d'après vos informations, ce critère ne semble pas rempli ({detail})"
+NEED_INFO = "Pour vérifier les critères de cette formation, j'ai besoin de : {items}."
+NOTE = " À noter : {items}."
+NOT_MET_ONE = "ce critère n'est pas rempli"
+NOT_MET_MANY = "ces critères ne sont pas remplis"
+NOT_MET = "D'après les informations indiquées, {intro} : {items}."
+CANNOT_CONFIRM = "Je ne peux pas confirmer automatiquement les critères de cette formation : {items}. "
+NO_CRITERIA = "Cette formation n'impose pas de critère d'admission particulier. "
+CRITERIA_MET = "Vous remplissez les critères affichés pour cette formation. "
+
 # Diplômes professionnels et années du secondaire : le fichier ne dit pas s'ils
 # sont équivalents, donc le code ne les compare pas (voir check_level).
 PROFESSIONAL_LEVELS = {Level.CAP, Level.BTP}
@@ -101,7 +125,7 @@ class EligibilityResult:
 
 def _to_confirm(criterion: str, official_text: str) -> str:
     """Motif d'un critère que le code n'a pas compris : il est cité, jamais interprété."""
-    return f"{criterion} à confirmer par l'équipe des admissions (critère officiel : « {official_text} »)"
+    return tr(TO_CONFIRM).format(criterion=tr(criterion), official=tr(official_text))
 
 
 def has_criteria(formation: Formation) -> bool:
@@ -126,30 +150,27 @@ def check_level(formation: Formation, profile: Profile) -> tuple[str, str]:
         if is_all(formation.level_raw):
             return Check.OK, ""                               # « All » : aucune exigence
         # Texte non compris à l'import : on ne devine pas, l'équipe tranche
-        return Check.RESERVED, _to_confirm("niveau", formation.level_raw)
+        return Check.RESERVED, _to_confirm(CRITERION_LEVEL, formation.level_raw)
     if profile.level is None:
-        return Check.MISSING, MISSING_LEVEL
+        return Check.MISSING, tr(MISSING_LEVEL)
 
     # Voie alternative citée par le fichier : « … ou CAP / BTP dans le même secteur »
     if profile.level in formation.level_alternatives:
         if formation.alternatives_same_sector:
-            return Check.RESERVED, (
-                "accès possible avec votre diplôme professionnel, sous réserve que "
-                "l'équipe des admissions confirme qu'il relève du même secteur"
-            )
+            return Check.RESERVED, tr(SAME_SECTOR)
         return Check.OK, ""
 
     # CAP ou BTP face à une année du secondaire (ex. BTP et « 4ème année secondaire ») :
     # le fichier ne dit pas s'ils sont équivalents, on ne confirme ni ne refuse.
     if profile.level in PROFESSIONAL_LEVELS and formation.min_level in SECONDARY_YEARS:
-        return Check.RESERVED, _to_confirm("niveau", formation.level_raw)
+        return Check.RESERVED, _to_confirm(CRITERION_LEVEL, formation.level_raw)
 
     if Level.RANK[profile.level] >= Level.RANK[formation.min_level]:
         return Check.OK, ""
 
     # On cite le texte officiel de l'école : il montre aussi les voies
     # « ou CAP / ou BTP dans le même secteur », que le seul niveau minimal cacherait.
-    return Check.FAILED, f"niveau requis : {formation.level_raw}"
+    return Check.FAILED, tr(LEVEL_REQUIRED).format(official=tr(formation.level_raw))
 
 
 # ===========================================================================
@@ -162,12 +183,12 @@ def check_nationality(formation: Formation, profile: Profile) -> tuple[str, str]
         if is_all(formation.nationality_raw):
             return Check.OK, ""                               # toutes nationalités
         # Ex. « Tunisienne ou Algérienne » : non comprise à l'import, l'équipe tranche
-        return Check.RESERVED, _to_confirm("nationalité", formation.nationality_raw)
+        return Check.RESERVED, _to_confirm(CRITERION_NATIONALITY, formation.nationality_raw)
     if profile.nationality is None:
-        return Check.MISSING, MISSING_NATIONALITY
+        return Check.MISSING, tr(MISSING_NATIONALITY)
     if profile.nationality == formation.nationality_required:
         return Check.OK, ""
-    return Check.FAILED, f"nationalité requise : {formation.nationality_raw}"
+    return Check.FAILED, tr(NATIONALITY_REQUIRED).format(official=tr(formation.nationality_raw))
 
 
 # ===========================================================================
@@ -178,15 +199,15 @@ def check_bac(formation: Formation, profile: Profile) -> tuple[str, str]:
     """Vérifie la section du bac (ou du secondaire), seulement si elle est exigée."""
     if formation.bac_rule == BacRule.ANY and not is_all(formation.bac_raw):
         # Ex. « Bac français » : non comprise à l'import, l'équipe tranche
-        return Check.RESERVED, _to_confirm("nature du bac", formation.bac_raw)
+        return Check.RESERVED, _to_confirm(CRITERION_BAC, formation.bac_raw)
     if formation.bac_rule != BacRule.SECTIONS:
         return Check.OK, ""                                   # toutes sections ou bac non requis
     if profile.bac_section is None:
-        return Check.MISSING, MISSING_BAC_SECTION
+        return Check.MISSING, tr(MISSING_BAC_SECTION)
     if profile.bac_section in formation.bac_sections:
         return Check.OK, ""
     # On cite le texte officiel de l'école, sans le reformuler
-    return Check.FAILED, f"section requise : {formation.bac_raw}"
+    return Check.FAILED, tr(SECTION_REQUIRED).format(official=tr(formation.bac_raw))
 
 
 # ===========================================================================
@@ -218,8 +239,8 @@ def evaluate(formation: Formation, profile: Profile) -> EligibilityResult:
 
     if formation.import_warnings:
         # Données douteuses : ni confirmation ni refus ferme
-        reserved += [f"d'après vos informations, ce critère ne semble pas rempli ({detail})" for detail in failed]
-        reserved.append(UNVERIFIED_CRITERIA)
+        reserved += [tr(SEEMS_NOT_MET).format(detail=detail) for detail in failed]
+        reserved.append(tr(UNVERIFIED_CRITERIA))
         failed = []
 
     if failed:
@@ -253,21 +274,78 @@ def message_for(result: EligibilityResult) -> str:
     décision finale appartient à l'équipe des admissions.
     """
     if result.status == Status.INCOMPLETE:
-        message = "Pour vérifier les critères de cette formation, j'ai besoin de : " + ", ".join(result.missing) + "."
+        message = tr(NEED_INFO).format(items=join(result.missing))
         if result.reasons:
-            message += " À noter : " + " ; ".join(result.reasons) + "."
+            message += tr(NOTE).format(items=join(result.reasons, SEMICOLON))
         return message
 
     if result.status == Status.NOT_COMPATIBLE:
-        intro = "ces critères ne sont pas remplis" if len(result.reasons) > 1 else "ce critère n'est pas rempli"
-        return f"D'après les informations indiquées, {intro} : " + " ; ".join(result.reasons) + "."
+        intro = tr(NOT_MET_MANY) if len(result.reasons) > 1 else tr(NOT_MET_ONE)
+        return tr(NOT_MET).format(intro=intro, items=" ; ".join(result.reasons))
 
     if result.status == Status.CONDITIONAL:
-        return (
-            "Je ne peux pas confirmer automatiquement les critères de cette formation : "
-            + " ; ".join(result.reasons) + ". " + FINAL_DECISION
-        )
+        return tr(CANNOT_CONFIRM).format(items=" ; ".join(result.reasons)) + tr(FINAL_DECISION)
 
     if result.no_criteria:
-        return "Cette formation n'impose pas de critère d'admission particulier. " + FINAL_DECISION
-    return "Vous remplissez les critères affichés pour cette formation. " + FINAL_DECISION
+        return tr(NO_CRITERIA) + tr(FINAL_DECISION)
+    return tr(CRITERIA_MET) + tr(FINAL_DECISION)
+
+
+# --- Traductions (le texte français ci-dessus reste la référence) -------------------------------
+# Les textes officiels des écoles (« Bac+2 / BTS », « Tunisienne »…) sont cités tels quels.
+
+add_translations({
+    MISSING_LEVEL: {"en": "level of education", "ar": "المستوى الدراسي"},
+    MISSING_NATIONALITY: {"en": "nationality", "ar": "الجنسية"},
+    MISSING_BAC_SECTION: {"en": "baccalaureate (or secondary school) track", "ar": "شعبة البكالوريا (أو التعليم الثانوي)"},
+    CRITERION_LEVEL: {"en": "level", "ar": "المستوى"},
+    CRITERION_NATIONALITY: {"en": "nationality", "ar": "الجنسية"},
+    CRITERION_BAC: {"en": "baccalaureate track", "ar": "شعبة البكالوريا"},
+    TO_CONFIRM: {
+        "en": "{criterion} to be confirmed by the admissions team (official criterion: “{official}”)",
+        "ar": "{criterion}: يحتاج إلى تأكيد من فريق القبول (الشرط الرسمي: «{official}»)",
+    },
+    SAME_SECTOR: {
+        "en": "access possible with your vocational diploma, provided the admissions team confirms "
+              "it belongs to the same field",
+        "ar": "القبول ممكن بشهادتك المهنية، شريطة أن يؤكد فريق القبول أنها من نفس الاختصاص",
+    },
+    LEVEL_REQUIRED: {"en": "required level: {official}", "ar": "المستوى المطلوب: {official}"},
+    NATIONALITY_REQUIRED: {"en": "required nationality: {official}", "ar": "الجنسية المطلوبة: {official}"},
+    SECTION_REQUIRED: {"en": "required track: {official}", "ar": "الشعبة المطلوبة: {official}"},
+    SEEMS_NOT_MET: {
+        "en": "based on your information, this criterion does not seem to be met ({detail})",
+        "ar": "حسب معلوماتك، يبدو أن هذا الشرط غير مستوفى ({detail})",
+    },
+    UNVERIFIED_CRITERIA: {
+        "en": "the criteria for this program are being checked by the admissions team",
+        "ar": "شروط هذا البرنامج قيد التحقق من قبل فريق القبول",
+    },
+    FINAL_DECISION: {
+        "en": "The final decision rests with the admissions team.",
+        "ar": "القرار النهائي يعود إلى فريق القبول.",
+    },
+    NEED_INFO: {
+        "en": "To check the criteria for this program, I need: {items}.",
+        "ar": "للتحقق من شروط هذا البرنامج، أحتاج إلى: {items}.",
+    },
+    NOTE: {"en": " Please note: {items}.", "ar": " ملاحظة: {items}."},
+    NOT_MET_ONE: {"en": "this criterion is not met", "ar": "هذا الشرط غير مستوفى"},
+    NOT_MET_MANY: {"en": "these criteria are not met", "ar": "هذه الشروط غير مستوفاة"},
+    NOT_MET: {
+        "en": "Based on the information provided, {intro}: {items}.",
+        "ar": "حسب المعلومات المقدمة، {intro}: {items}.",
+    },
+    CANNOT_CONFIRM: {
+        "en": "I cannot automatically confirm the criteria for this program: {items}. ",
+        "ar": "لا يمكنني التأكيد تلقائيًا على شروط هذا البرنامج: {items}. ",
+    },
+    NO_CRITERIA: {
+        "en": "This program has no specific admission criteria. ",
+        "ar": "لا يفرض هذا البرنامج أي شرط قبول خاص. ",
+    },
+    CRITERIA_MET: {
+        "en": "You meet the criteria shown for this program. ",
+        "ar": "أنت تستوفي الشروط المعروضة لهذا البرنامج. ",
+    },
+})

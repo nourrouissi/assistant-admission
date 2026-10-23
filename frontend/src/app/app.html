@@ -7,24 +7,31 @@
       <span class="brand-cap"><app-cap-mark [size]="26" /></span>
       <span class="brand-text">
         <span class="brand-name">Cap <em>Diplôme</em></span>
-        <span class="brand-tagline">Votre cap vers le diplôme</span>
+        <span class="brand-tagline">{{ i18n.t("Votre cap vers le diplôme") }}</span>
       </span>
     </div>
 
     <app-ceremony-path class="path-wide" [steps]="store.journey()" />
 
     <div class="tools">
+      <div class="langs" role="group" [attr.aria-label]="i18n.t('Langue')">
+        @for (language of languages; track language.code) {
+          <button type="button" class="lang" [class.active]="i18n.lang() === language.code"
+                  [attr.aria-pressed]="i18n.lang() === language.code" [attr.lang]="language.code"
+                  [matTooltip]="language.name" (click)="i18n.lang.set(language.code)">{{ language.label }}</button>
+        }
+      </div>
       @if (store.started()) {
         <button mat-stroked-button class="restart" type="button" (click)="restart()">
           <mat-icon>add_comment</mat-icon>
-          <span class="restart-label">Nouvelle conversation</span>
+          <span class="restart-label">{{ i18n.t("Nouvelle conversation") }}</span>
         </button>
       }
     </div>
   </mat-toolbar>
   <div class="ribbon" aria-hidden="true"></div>
   @if (store.pending()) {
-    <mat-progress-bar class="loading" mode="indeterminate" aria-label="Réponse en cours" />
+    <mat-progress-bar class="loading" mode="indeterminate" [attr.aria-label]="i18n.t('Réponse en cours')" />
   }
 
   <div class="path-strip">
@@ -36,7 +43,7 @@
       @if (!store.started()) {
         <app-welcome (pick)="ask($event)" />
       } @else {
-        <div class="thread" role="log" aria-live="polite" aria-label="Conversation avec Cap Diplôme">
+        <div class="thread" role="log" aria-live="polite" [attr.aria-label]="i18n.t('Conversation avec Cap Diplôme')">
           @for (entry of store.entries(); track entry.id) {
             <app-message data-entry [attr.data-role]="entry.role" [entry]="entry"
                          [summaryOpen]="entry.id === store.openSummaryId()" [pending]="store.pending()"
@@ -45,7 +52,7 @@
           @if (store.pending()) {
             <div class="thinking">
               <span class="thinking-cap"><app-cap-mark [size]="22" [swing]="true" /></span>
-              <span class="thinking-dots" role="status" aria-label="Cap Diplôme rédige sa réponse">
+              <span class="thinking-dots" role="status" [attr.aria-label]="i18n.t('Cap Diplôme rédige sa réponse')">
                 <span></span><span></span><span></span>
               </span>
             </div>
@@ -61,21 +68,21 @@
             <mat-icon>{{ stage === 'collect' ? 'edit_note' : 'assignment_turned_in' }}</mat-icon>
             <span>
               @if (stage === 'collect') {
-                <strong>Demande d'inscription en cours</strong> · indiquez votre nom, prénom, e-mail et téléphone.
+                <strong>{{ i18n.t("Demande d'inscription en cours") }}</strong> · {{ i18n.t('indiquez votre nom, prénom, e-mail et téléphone.') }}
               } @else {
-                <strong>Dossier en attente</strong> · confirmez, modifiez ou annulez avec les boutons du dossier.
+                <strong>{{ i18n.t('Dossier en attente') }}</strong> · {{ i18n.t('confirmez, modifiez ou annulez avec les boutons du dossier.') }}
               }
             </span>
             @if (stage === 'collect') {
               <button mat-button type="button" class="bar-cancel" [disabled]="store.pending()"
-                      (click)="store.act('cancel')">Annuler</button>
+                      (click)="store.act('cancel')">{{ i18n.t('Annuler') }}</button>
             }
           </div>
         }
         <app-composer [pending]="store.pending()" [placeholder]="placeholder()" (send)="ask($event)" />
         <p class="disclaimer">
           <mat-icon>gavel</mat-icon>
-          Réponses issues des documents officiels des admissions. La décision d'admission appartient toujours à l'équipe des admissions.
+          {{ i18n.t("Réponses issues des documents officiels des admissions. La décision d'admission appartient toujours à l'équipe des admissions.") }}
         </p>
       </div>
     </footer>

@@ -2,6 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Injectable, computed, effect, inject, signal } from '@angular/core';
 
 import { ChatApi } from './chat-api';
+import { I18n } from './i18n';
 import { journeyFrom } from './journey';
 import { Block, ChatRequest, Entry, FormationCard, RegistrationStage, SummaryAction } from './models';
 
@@ -28,6 +29,7 @@ const ACTION_LABELS: Record<SummaryAction, string> = {
 @Injectable({ providedIn: 'root' })
 export class ChatStore {
   private readonly api = inject(ChatApi);
+  private readonly i18n = inject(I18n);
 
   readonly sessionId = signal('');
   readonly entries = signal<Entry[]>([]);
@@ -65,14 +67,14 @@ export class ChatStore {
   /** Bouton « S'inscrire » d'une carte : la formation exacte est connue. */
   register(card: FormationCard): void {
     if (this.pending()) return;
-    this.push('user', [{ type: 'text', text: `Je souhaite m'inscrire à « ${card.specialty} » (${card.school}).` }], true);
+    this.push('user', [{ type: 'text', text: this.i18n.t("Je souhaite m'inscrire à « {specialty} » ({school}).", { specialty: card.specialty, school: card.school }) }], true);
     void this.call({ action: 'register', formation_id: card.id });
   }
 
   /** Boutons Confirmer / Modifier / Annuler (Annuler aussi pendant la collecte des coordonnées). */
   act(action: SummaryAction): void {
     if (this.pending()) return;
-    this.push('user', [{ type: 'text', text: ACTION_LABELS[action] }], true);
+    this.push('user', [{ type: 'text', text: this.i18n.t(ACTION_LABELS[action]) }], true);
     void this.call({ action });
   }
 
@@ -85,12 +87,16 @@ export class ChatStore {
   private async call(body: Omit<ChatRequest, 'session_id'>): Promise<void> {
     this.pending.set(true);
     try {
-      const response = await this.api.send({ ...body, session_id: this.sessionId() });
+      // Langue envoyée seulement si ce n'est pas le français (requêtes françaises inchangées)
+      const lang = this.i18n.lang();
+      const response = await this.api.send({ ...body, session_id: this.sessionId(), ...(lang !== 'fr' ? { lang } : {}) });
       this.sessionId.set(response.session_id);
+      // Le prospect a écrit dans une autre langue : l'interface le suit
+      if (response.lang && response.lang !== lang) this.i18n.lang.set(response.lang);
       this.registration.set(response.registration ?? null);
       if (response.blocks.length) this.push('assistant', response.blocks);
     } catch (error) {
-      this.push('notice', [{ type: 'text', text: errorMessage(error) }]);
+      this.push('notice', [{ type: 'text', text: this.i18n.t(errorMessage(error)) }]);
     } finally {
       this.pending.set(false);
     }

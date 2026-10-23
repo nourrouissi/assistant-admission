@@ -17,6 +17,7 @@ import { Composer } from './chat/composer';
 import { Message } from './chat/message';
 import { Welcome } from './chat/welcome';
 import { ChatStore } from './core/chat-store';
+import { I18n, LANGUAGES } from './core/i18n';
 import { CapMark } from './shared/cap-mark';
 import { CeremonyPath } from './shared/ceremony-path';
 
@@ -32,6 +33,8 @@ import { CeremonyPath } from './shared/ceremony-path';
 })
 export class App {
   protected readonly store = inject(ChatStore);
+  protected readonly i18n = inject(I18n);
+  protected readonly languages = LANGUAGES;
 
   private readonly scroller = viewChild<ElementRef<HTMLElement>>('scroller');
   private readonly composer = viewChild(Composer);
@@ -39,7 +42,7 @@ export class App {
 
   /** Texte d'aide de la zone de saisie, selon l'étape de l'inscription. */
   protected readonly placeholder = computed(() =>
-    this.store.registration() === 'collect' ? 'Nom, prénom, e-mail, téléphone…' : 'Posez votre question…',
+    this.i18n.t(this.store.registration() === 'collect' ? 'Nom, prénom, e-mail, téléphone…' : 'Posez votre question…'),
   );
 
   constructor() {

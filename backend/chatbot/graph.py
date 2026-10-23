@@ -28,6 +28,8 @@ from langgraph.graph import END, START, MessagesState, StateGraph
 from langgraph.prebuilt import ToolNode
 from langgraph.types import Command
 
+from config.i18n import add_translations, current_language, language_rule, tr
+
 from .llm import chat_models, with_fallbacks
 from .memory import checkpointer
 from .registration_flow import (
@@ -51,9 +53,9 @@ class ChatState(MessagesState):
 AGENT_PROMPT = """Tu es l'assistant d'admission des écoles IMSET.
 
 Choisis l'outil selon la demande du candidat :
-- search_procedure : questions sur la procédure d'admission, les étapes, les pièces justificatives, les dates limites, les frais, les conditions générales d'éligibilité, et toute autre demande d'information. Donne la question complète, compréhensible seule (reprends les éléments utiles des messages précédents).
+- search_procedure : questions sur la procédure d'admission, les étapes, les pièces justificatives, les dates limites, les frais, les conditions générales d'éligibilité, la garantie d'admission (« serai-je admis ? », « suis-je sûr d'être admis ? »), et toute autre demande d'information. Donne la question complète, compréhensible seule (reprends les éléments utiles des messages précédents).
 - search_formations : dès que le candidat cherche des formations ou des spécialités (domaine, diplôme, école), même s'il n'a donné aucune information personnelle.
-- check_eligibility : dès que le candidat donne son niveau d'études, sa nationalité ou la nature de son baccalauréat (y compris dans le même message que sa recherche, ex. « j'ai un bac informatique, quelles spécialités me correspondent ? » = niveau BAC, section INFORMATIQUE, mots-clés « informatique »), ou demande s'il est éligible. Donne toutes les informations de profil déjà indiquées dans la conversation, et les formations concernées (identifiants des formations déjà affichées, ou mots-clés, diplôme, école).
+- check_eligibility : dès que le candidat donne son niveau d'études, sa nationalité ou la nature de son baccalauréat (y compris dans le même message que sa recherche, ex. « j'ai un bac informatique, quelles spécialités me correspondent ? » = niveau BAC, section INFORMATIQUE, mots-clés « informatique »), ou demande s'il est éligible (une question sur la certitude d'être admis relève de search_procedure). Donne toutes les informations de profil déjà indiquées dans la conversation, et les formations concernées (identifiants des formations déjà affichées, ou mots-clés, diplôme, école).
 - start_registration : dès que le candidat souhaite s'inscrire ou déposer une demande pour une formation (identifiant d'une formation déjà affichée, ou mots-clés, diplôme, école).
 La réponse des outils est transmise directement au candidat.
 
@@ -84,8 +86,22 @@ COLLECT_IN_PROGRESS = (
 )
 
 
+# Autre langue que le français : les arguments des outils restent en français (catalogue et document)
+TOOL_ARGUMENTS_RULE = (
+    " Les arguments des outils restent en français, la langue du catalogue : mots-clés, école "
+    "(ex. « computer science » -> « informatique », « accounting » -> « comptabilité »), "
+    "nationalité (ex. « تونسية » ou « Tunisian » -> « tunisienne », « Algerian » -> « algérienne »). "
+    "Exception : si le candidat reprend le nom d'une formation tel qu'il est affiché dans les résultats "
+    "(ex. « bachelor in building and construction »), passe ce nom tel quel en mots-clés, sans le retraduire. "
+    "Types de diplôme : « إجازة » / « bachelor's degree » -> LICENCE, « إجازة مهنية » -> LICENCE_PRO, "
+    "« مهندس » / « engineering » -> INGENIEUR, « شهادة الكفاءة المهنية » -> CAP. "
+    "Une question sur les formations, diplômes, spécialités ou écoles (« ما هي الإجازات… », « which programs… ») "
+    "relève toujours de la recherche de formations, dans toutes les langues."
+)
+
+
 def _unavailable() -> str:
-    return UNAVAILABLE_MESSAGE.format(contact=settings.ADMISSIONS_CONTACT)
+    return tr(UNAVAILABLE_MESSAGE).format(contact=settings.ADMISSIONS_CONTACT)
 
 
 def _tool_error(error: Exception) -> str:
@@ -100,11 +116,13 @@ def _agent_model() -> Runnable:
 
 
 def _system_prompt(state: ChatState) -> str:
+    # Français : instructions d'origine, inchangées (language_rule() est vide)
+    language = language_rule() + (TOOL_ARGUMENTS_RULE if current_language() != "fr" else "")
     registration = state.get("registration")
     if not registration:
-        return AGENT_PROMPT
+        return AGENT_PROMPT + language
     step = PENDING_COLLECT if registration["stage"] == "collect" else PENDING_SUMMARY
-    return AGENT_PROMPT + PENDING_PROMPT.format(step=step)
+    return AGENT_PROMPT + PENDING_PROMPT.format(step=step) + language
 
 
 def agent(state: ChatState) -> dict:
@@ -249,11 +267,30 @@ def registration_action(session_id: str, action: str) -> list[dict]:
     state = get_graph().get_state(_config(session_id))
     registration = state.values.get("registration")
     if not registration:
-        return [{"type": "text", "text": NO_PENDING_REGISTRATION}]
+        return [{"type": "text", "text": tr(NO_PENDING_REGISTRATION)}]
     if registration["stage"] == "collect":
         if action == "cancel":
             return _run(session_id, {"event": "cancel"})
-        return [{"type": "text", "text": COLLECT_IN_PROGRESS}]     # rien à confirmer avant le récapitulatif
+        return [{"type": "text", "text": tr(COLLECT_IN_PROGRESS)}]     # rien à confirmer avant le récapitulatif
     if not state.interrupts or action not in SUMMARY_ACTIONS:
-        return [{"type": "text", "text": NO_PENDING_REGISTRATION}]
+        return [{"type": "text", "text": tr(NO_PENDING_REGISTRATION)}]
     return _run(session_id, Command(resume={"action": action}))
+
+
+# --- Traductions (le texte français ci-dessus reste la référence) -------------------------------
+
+add_translations({
+    UNAVAILABLE_MESSAGE: {
+        "en": "I cannot answer at the moment. You can contact the admissions office: {contact}.",
+        "ar": "لا يمكنني الرد في الوقت الحالي. يمكنك التواصل مع مصلحة القبول: {contact}.",
+    },
+    NO_PENDING_REGISTRATION: {
+        "en": "There is no application in progress.",
+        "ar": "لا يوجد طلب تسجيل قيد الإنجاز.",
+    },
+    COLLECT_IN_PROGRESS: {
+        "en": "Your application cannot be confirmed yet: first give your last name, first name, "
+              "email address and phone number.",
+        "ar": "لا يمكن تأكيد طلبك بعد: يُرجى أولًا ذكر اسم العائلة والاسم الأول والبريد الإلكتروني ورقم الهاتف.",
+    },
+})

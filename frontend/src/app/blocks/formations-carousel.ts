@@ -1,7 +1,8 @@
-import { ChangeDetectionStrategy, Component, ElementRef, computed, input, output, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, computed, inject, input, output, viewChild } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 
+import { I18n } from '../core/i18n';
 import { FormationCard as Card } from '../core/models';
 import { FormationCard } from './formation-card';
 
@@ -16,10 +17,10 @@ import { FormationCard } from './formation-card';
         <h4><span class="count">{{ items().length }}</span>{{ title() }}</h4>
         @if (items().length > 1) {
           <div class="nav">
-            <button mat-icon-button type="button" aria-label="Formations précédentes" (click)="scroll(-1)">
+            <button mat-icon-button type="button" [attr.aria-label]="i18n.t('Formations précédentes')" (click)="scroll(-1)">
               <mat-icon>chevron_left</mat-icon>
             </button>
-            <button mat-icon-button type="button" aria-label="Formations suivantes" (click)="scroll(1)">
+            <button mat-icon-button type="button" [attr.aria-label]="i18n.t('Formations suivantes')" (click)="scroll(1)">
               <mat-icon>chevron_right</mat-icon>
             </button>
           </div>
@@ -62,11 +63,13 @@ export class FormationsCarousel {
   readonly disabled = input(false);
   readonly register = output<Card>();
 
+  protected readonly i18n = inject(I18n);
+
   protected readonly Math = Math;
   protected readonly title = computed(() => {
     const evaluated = this.items().some((card) => card.eligibility);
     const plural = this.items().length > 1 ? 's' : '';
-    return evaluated ? `formation${plural} vérifiée${plural} pour votre profil` : `formation${plural} pour vous`;
+    return this.i18n.t(evaluated ? `formation${plural} vérifiée${plural} pour votre profil` : `formation${plural} pour vous`);
   });
 
   private readonly track = viewChild.required<ElementRef<HTMLElement>>('track');

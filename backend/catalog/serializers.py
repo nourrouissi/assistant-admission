@@ -10,6 +10,8 @@ Sérialiseurs : transforment les données en JSON (et valident le JSON reçu).
 
 from rest_framework import serializers
 
+from config.i18n import tr
+
 from .models import Formation
 from .normalization import BacSection, Level, normalize_nationality, parse_diploma_type_code
 
@@ -26,22 +28,30 @@ class FormationSerializer(serializers.ModelSerializer):
         model = Formation
         fields = ["id", "diploma", "diploma_type", "specialty", "school", "city", "criteria", "criteria_under_review"]
 
+    def to_representation(self, instance: Formation) -> dict:
+        """En anglais ou en arabe, la spécialité est affichée traduite (en français : inchangée)."""
+        data = super().to_representation(instance)
+        data["specialty"] = tr(data["specialty"])
+        return data
+
     def get_diploma(self, obj: Formation) -> str:
         """
         Libellé officiel du diplôme, tel qu'il figure dans le fichier (« INGENIEUR CNAM »),
         sans rien ajouter ni retirer. Le type normalisé reste disponible dans `diploma_type`.
+        En anglais ou en arabe, sa traduction (catalog/translations.py).
         """
-        return obj.diploma_label
+        return tr(obj.diploma_label)
 
     def get_criteria(self, obj: Formation) -> dict:
         """
         Critères d'éligibilité à afficher sur la carte : le texte du fichier, tel quel
         (seuls les espaces en trop sont retirés à l'import). Aucune reformulation.
+        En anglais ou en arabe, leur traduction.
         """
         return {
-            "level": obj.level_raw,
-            "nationality": obj.nationality_raw,
-            "bac": obj.bac_raw,
+            "level": tr(obj.level_raw),
+            "nationality": tr(obj.nationality_raw),
+            "bac": tr(obj.bac_raw),
         }
 
     def get_criteria_under_review(self, obj: Formation) -> bool:

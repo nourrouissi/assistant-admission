@@ -131,6 +131,9 @@ mat-card-content { padding: 18px 22px 6px !important; }
     color: var(--gown);
     overflow-wrap: anywhere;
   }
+
+  // En arabe, l'e-mail et le téléphone (écrits de gauche à droite) restent alignés à droite
+  :host-context([dir='rtl']) & dd[dir='ltr'] { text-align: right; }
 }
 
 .actions {

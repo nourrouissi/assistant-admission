@@ -1,7 +1,7 @@
 @if (other(); as o) {
-  <span class="tag" [attr.data-tone]="o.tone"><mat-icon>{{ o.icon }}</mat-icon>{{ o.label }}</span>
+  <span class="tag" [attr.data-tone]="o.tone"><mat-icon>{{ o.icon }}</mat-icon>{{ i18n.t(o.label) }}</span>
 } @else {
-  <mat-card class="celebration" aria-label="Demande d'inscription transmise">
+  <mat-card class="celebration" [attr.aria-label]="i18n.t(sentLabel)">
     <div class="stage" aria-hidden="true">
       <span class="spot"></span>
       @for (piece of confetti; track $index) {
@@ -19,14 +19,14 @@
     </div>
 
     <div class="body">
-      <p class="eyebrow">Première étape franchie</p>
-      <h3>Votre demande est transmise</h3>
+      <p class="eyebrow">{{ i18n.t('Première étape franchie') }}</p>
+      <h3>{{ i18n.t('Votre demande est transmise') }}</h3>
       @if (block().formation; as formation) {
         <p class="formation">{{ formation.specialty | tidy }} <span>·</span> {{ formation.school }}</p>
       }
-      <span class="status"><span class="dot"></span>Statut : {{ block().status ?? 'Nouvelle' }}</span>
+      <span class="status"><span class="dot"></span>{{ i18n.t('Statut : {status}', { status: i18n.t(block().status ?? 'Nouvelle') }) }}</span>
       <p class="note">
-        Votre demande va être étudiée par l'équipe des admissions, à qui appartient la décision finale.
+        {{ i18n.t("Votre demande va être étudiée par l'équipe des admissions, à qui appartient la décision finale.") }}
       </p>
     </div>
   </mat-card>

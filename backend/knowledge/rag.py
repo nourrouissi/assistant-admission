@@ -11,6 +11,7 @@ Exigences du sujet appliquées ici :
 from __future__ import annotations
 
 import logging
+import re
 from typing import Literal
 
 from django.conf import settings
@@ -19,6 +20,7 @@ from langchain_core.runnables import Runnable
 from pydantic import BaseModel, Field
 
 from chatbot.llm import chat_models, with_fallbacks
+from config.i18n import add_translations, current_language, language_rule, tr
 
 from . import retrieval
 
@@ -36,6 +38,12 @@ class ProcedureAnswer(BaseModel):
             "none : elles ne contiennent pas la réponse."
         )
     )
+
+
+class TranslatedProcedureAnswer(ProcedureAnswer):
+    """Même réponse structurée, rédigée dans la langue choisie par le candidat (anglais ou arabe)."""
+
+    answer: str = Field(description="Réponse au candidat, rédigée entièrement dans la langue demandée.")
 
 
 # Les règles de la section 6 du document (« Questions sans réponse ») sont reprises ici.
@@ -60,16 +68,62 @@ UNAVAILABLE_MESSAGE = (
 )
 
 
+FRENCH_RULE = "7. Réponds en français, naturellement"
+
+
+def _system_prompt() -> str:
+    """Instructions du modèle ; en français, exactement celles d'origine."""
+    if current_language() == "fr":
+        return SYSTEM_PROMPT
+    return SYSTEM_PROMPT.replace(FRENCH_RULE, "7. Réponds naturellement") + language_rule()
+
+
 def _answer_chain() -> Runnable:
     """Chaque modèle produit la sortie structurée, puis la chaîne de secours les enchaîne."""
+    schema = ProcedureAnswer if current_language() == "fr" else TranslatedProcedureAnswer
     return with_fallbacks([
-        model.with_structured_output(ProcedureAnswer, method="function_calling") for model in chat_models()
+        model.with_structured_output(schema, method="function_calling") for model in chat_models()
     ])
+
+
+# Autre langue que le français : la consigne est rappelée juste après la question (les informations
+# fournies sont en français, et un modèle de secours pourrait sinon répondre en français)
+ANSWER_LANGUAGE = {"en": "Réponds entièrement en anglais.", "ar": "Réponds entièrement en arabe."}
+COVERAGE_REMINDER = (
+    " La couverture s'évalue sur le fond, quelle que soit la langue : si la question porte sur une date, "
+    "un montant ou un tarif précis qui ne figure pas dans les informations, la couverture est « partial » ou « none »."
+)
+
+_ARABIC_LETTER = re.compile(r"[ء-ي]")
+_LATIN_LETTER = re.compile(r"[A-Za-zÀ-ÿ]")
+_FRENCH_WORDS = re.compile(r"\b(?:les|des|vous|votre|une|est|pour|dans|selon|avec)\b", re.IGNORECASE)
 
 
 def _user_message(question: str, chunks) -> str:
     information = "\n\n".join(chunk.content for chunk in chunks) or "(aucune information)"
-    return f"Informations :\n{information}\n\nQuestion du candidat : {question}"
+    message = f"Informations :\n{information}\n\nQuestion du candidat : {question}"
+    # Rappel de la couverture dans toutes les langues : sans lui, un montant cité par le candidat
+    # (« 50 dinars ») était parfois jugé « complete », et l'orientation vers les admissions manquait
+    language = ANSWER_LANGUAGE.get(current_language(), "")
+    return f"{message}\n\n{(language + COVERAGE_REMINDER).strip()}"
+
+
+def written_in_language(answer: str) -> bool:
+    """
+    Vrai si la réponse est bien dans la langue du candidat (toujours vrai en français).
+    Arabe : au moins 70 % de lettres arabes (sigles, noms d'écoles et e-mails restent en lettres latines).
+    Anglais : aucune phrase française (mots français courants).
+    """
+    language = current_language()
+    if language == "ar":
+        arabic = len(_ARABIC_LETTER.findall(answer))
+        # Mots latins écrits en minuscules seulement : sigles et noms d'écoles (BTS, IMSET SOUSSE) exclus
+        words = re.sub(r"\S+@\S+", "", answer).split()
+        latin = sum(len(_LATIN_LETTER.findall(word)) for word in words if any(ch.islower() for ch in word))
+        return arabic >= 0.7 * (arabic + latin)
+    if language == "en":
+        return len(_FRENCH_WORDS.findall(answer)) < 3
+    return True
 
 
 def answer_procedure_question(question: str) -> dict:
@@ -84,16 +138,32 @@ def answer_procedure_question(question: str) -> dict:
     try:
         chunks = retrieval.search(question)
         sections = [chunk.section_number for chunk in chunks]
-        result: ProcedureAnswer = _answer_chain().invoke([
-            SystemMessage(SYSTEM_PROMPT),
-            HumanMessage(_user_message(question, chunks)),
-        ])
+        messages = [SystemMessage(_system_prompt()), HumanMessage(_user_message(question, chunks))]
+        result: ProcedureAnswer = _answer_chain().invoke(messages)
+        if not written_in_language(result.answer):
+            # Réponse dans une autre langue que celle du candidat : une seconde tentative
+            logger.warning("RAG procédure : réponse hors langue (%s), nouvelle tentative", current_language())
+            result = _answer_chain().invoke(messages)
     except Exception:
         logger.exception("RAG procédure : aucun modèle n'a pu répondre (sections %s)", sections)
-        return {"answer": UNAVAILABLE_MESSAGE.format(contact=contact), "coverage": "none", "sections": sections}
+        return {"answer": tr(UNAVAILABLE_MESSAGE).format(contact=contact), "coverage": "none", "sections": sections}
 
     answer = result.answer.strip()
     if result.coverage != "complete" and contact not in answer:
-        answer = f"{answer} {CONTACT_SENTENCE.format(contact=contact)}"
+        answer = f"{answer} {tr(CONTACT_SENTENCE).format(contact=contact)}"
     logger.info("RAG procédure : couverture %s, sections %s", result.coverage, sections)
     return {"answer": answer, "coverage": result.coverage, "sections": sections}
+
+
+# --- Traductions (le texte français ci-dessus reste la référence) -------------------------------
+
+add_translations({
+    CONTACT_SENTENCE: {
+        "en": "For more details, you can contact the admissions office: {contact}.",
+        "ar": "لمزيد من التفاصيل، يمكنك التواصل مع مصلحة القبول: {contact}.",
+    },
+    UNAVAILABLE_MESSAGE: {
+        "en": "I cannot answer at the moment. You can contact the admissions office: {contact}.",
+        "ar": "لا يمكنني الرد في الوقت الحالي. يمكنك التواصل مع مصلحة القبول: {contact}.",
+    },
+})

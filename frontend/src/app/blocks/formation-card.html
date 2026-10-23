@@ -6,7 +6,7 @@
 
   <div class="frame">
     <mat-card-header>
-      <mat-card-subtitle class="overline">Diplôme</mat-card-subtitle>
+      <mat-card-subtitle class="overline">{{ i18n.t('Diplôme') }}</mat-card-subtitle>
       <mat-card-title class="specialty">{{ card().specialty | tidy }}</mat-card-title>
       <mat-card-subtitle class="label">{{ card().diploma | tidy }}</mat-card-subtitle>
     </mat-card-header>
@@ -26,12 +26,12 @@
       </dl>
 
       @if (card().criteria_under_review) {
-        <p class="review"><mat-icon>pending</mat-icon>Critères en cours de vérification par l'équipe des admissions</p>
+        <p class="review"><mat-icon>pending</mat-icon>{{ i18n.t("Critères en cours de vérification par l'équipe des admissions") }}</p>
       }
 
       @if (verdict(); as v) {
         <div class="verdict" [attr.data-status]="v.status">
-          <span class="stamp"><mat-icon>{{ v.icon }}</mat-icon>{{ v.label }}</span>
+          <span class="stamp"><mat-icon>{{ v.icon }}</mat-icon>{{ i18n.t(v.label) }}</span>
           <p>{{ v.message }}</p>
         </div>
       }
@@ -40,7 +40,7 @@
     <mat-card-actions>
       <button mat-flat-button class="enroll" type="button" [disabled]="disabled()" (click)="register.emit(card())">
         <mat-icon>history_edu</mat-icon>
-        S'inscrire
+        {{ i18n.t("S'inscrire") }}
       </button>
     </mat-card-actions>
   </div>

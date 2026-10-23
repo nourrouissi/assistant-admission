@@ -91,7 +91,34 @@
   white-space: nowrap;
 }
 
-.tools { display: flex; justify-content: flex-end; }
+.tools { display: flex; justify-content: flex-end; align-items: center; gap: 12px; }
+
+// Sélecteur de langue : FR · EN · ع
+.langs {
+  display: inline-flex;
+  padding: 3px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.lang {
+  min-width: 36px;
+  height: 30px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.75);
+  font: 700 0.78rem/1 var(--font-text);
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+
+  &[lang='ar'] { font-family: 'Cairo', var(--font-text); font-size: 0.95rem; }
+  &:hover { color: #ffffff; background: rgba(255, 255, 255, 0.12); }
+  &:focus-visible { outline: 2px solid var(--red-ui); outline-offset: 2px; }
+  &.active { color: #ffffff; background: var(--red-ui); }
+}
 
 .restart {
   @include mat.button-overrides((

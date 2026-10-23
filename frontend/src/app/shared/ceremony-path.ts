@@ -1,6 +1,7 @@
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 
+import { I18n } from '../core/i18n';
 import { JourneyStep } from '../core/journey';
 import { CapMark } from './cap-mark';
 
@@ -13,7 +14,7 @@ import { CapMark } from './cap-mark';
   imports: [MatIconModule, CapMark],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <nav class="path" [class.compact]="compact()" aria-label="Votre parcours">
+    <nav class="path" [class.compact]="compact()" [attr.aria-label]="i18n.t('Votre parcours')">
       <div class="track" aria-hidden="true">
         <div class="fill" [style.width.%]="progress()"></div>
       </div>
@@ -23,15 +24,15 @@ import { CapMark } from './cap-mark';
             <span class="node">
               <mat-icon>{{ step.state === 'done' ? 'check' : step.icon }}</mat-icon>
             </span>
-            <span class="label">{{ step.title }}</span>
+            <span class="label">{{ i18n.t(step.title) }}</span>
             <span class="sr-only">
-              {{ step.state === 'done' ? '(terminée)' : step.state === 'active' ? '(en cours)' : '(à venir)' }}
+              {{ i18n.t(step.state === 'done' ? '(terminée)' : step.state === 'active' ? '(en cours)' : '(à venir)') }}
             </span>
           </li>
         }
         <li class="goal" [attr.data-state]="complete() ? 'done' : 'todo'">
           <span class="node"><app-cap-mark [size]="compact() ? 18 : 22" /></span>
-          <span class="label">Diplôme</span>
+          <span class="label">{{ i18n.t('Diplôme') }}</span>
         </li>
       </ol>
     </nav>
@@ -41,6 +42,7 @@ import { CapMark } from './cap-mark';
 export class CeremonyPath {
   readonly steps = input.required<JourneyStep[]>();
   readonly compact = input(false);
+  protected readonly i18n = inject(I18n);
 
   protected readonly complete = computed(() => this.steps().every((step) => step.state === 'done'));
   /** Avancée de la barre : jusqu'au nœud de l'étape en cours, jusqu'à la toque quand tout est fait. */

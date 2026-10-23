@@ -31,6 +31,12 @@ describe('formation card helpers', () => {
     expect(diplomaShort({ ...card, diploma_type: null })).toBe('BDTS');
   });
 
+  it('replaces the French acronyms in English and keeps the official ones', () => {
+    expect(diplomaShort({ ...card, diploma_type: 'SHORT_COURSE' }, 'en')).toBe('SHORT');
+    expect(diplomaShort({ ...card, diploma_type: 'SHORT_COURSE' })).toBe('COURT');
+    expect(diplomaShort(card, 'ar')).toBe('BTS');
+  });
+
   it('translates « All » and keeps any other official criterion as written', () => {
     expect(criterion('All', 'Toutes nationalités')).toBe('Toutes nationalités');
     expect(criterion('Tunisienne', 'Toutes nationalités')).toBe('Tunisienne');

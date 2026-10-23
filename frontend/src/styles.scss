@@ -41,6 +41,12 @@
   --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 
+// Arabe : police avec les lettres arabes (Montserrat et Playfair n'en ont pas)
+html[lang='ar'] {
+  --font-display: 'Cairo', 'Segoe UI', Tahoma, sans-serif;
+  --font-text: 'Cairo', 'Segoe UI', Tahoma, sans-serif;
+}
+
 html {
   color-scheme: light;
   @include mat.theme((

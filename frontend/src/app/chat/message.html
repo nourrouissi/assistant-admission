@@ -28,7 +28,7 @@
     <div class="row assistant">
       <span class="avatar" aria-hidden="true"><app-cap-mark [size]="24" /></span>
       <div class="content">
-        <span class="sr-only">Cap Diplôme :</span>
+        <span class="sr-only">{{ i18n.t('Cap Diplôme :') }}</span>
         @for (block of entry().blocks; track $index) {
           @switch (block.type) {
             @case ('text') {
